@@ -17,6 +17,7 @@ where
     while nobody_done(&parties) {
         debug!(current_round);
         current_round += 1;
+        
         parties = next_round(parties, current_round)?;
         
     }

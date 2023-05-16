@@ -16,24 +16,60 @@ use super::{r2, KeygenPartyShareCounts, KeygenProtocolBuilder, KeygenShareId, Pa
 #[cfg(feature = "malicious")]
 use super::malicious::Behaviour;
 
+
+use std::convert::TryInto;
+use bls12_381::{G1Projective, G1Affine};
+
 #[derive(Debug, Clone)]
 pub(super) struct Bcast {
-    // pub(super) y_i_commit: hash::Output,
-    pub(super) ek: bls12_381::G1Projective,
-    // pub(super) ek_proof: paillier::zk::EncryptionKeyProof,
-    // pub(super) zkp: paillier::zk::ZkSetup,
-    // pub(super) zkp_proof: paillier::zk::ZkSetupProof,
+    pub(super) ek: G1Projective,
 }
+
 impl<'de> Deserialize<'de> for Bcast {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let ek_bytes = Self::deserialize(deserializer)?;
-        let ek = bls12_381::G1Projective::from_bytes(&ek_bytes.ek.to_bytes()).unwrap();
-        Ok(Bcast { ek })
+        struct BcastVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for BcastVisitor {
+            type Value = Bcast;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a byte array of length 96")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let ek_bytes: [u8; 48] = v
+                    .try_into()
+                    .map_err(|_| E::invalid_length(v.len(), &self))?;
+               
+                let ek = G1Affine::from_compressed(&ek_bytes).unwrap().into();
+                   
+
+                Ok(Bcast { ek })
+            }
+        }
+
+        deserializer.deserialize_bytes(BcastVisitor)
     }
 }
+// impl<'de> Deserialize<'de> for Bcast {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         let ek_bytes = Self::deserialize(deserializer)?;
+//         let ek = bls12_381::G1Projective::from_bytes(&ek_bytes.ek.to_bytes()).unwrap();
+//         Ok(Bcast { ek })
+//     }
+
+// }
+
+
 
 impl Serialize for Bcast {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

@@ -91,6 +91,7 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
         // store and check expected message types from this share_id
         let expected_msg_type = match self.expected_msg_types.get(bytes_meta.from)? {
             Some(msg_type) => {
+              
                 if *msg_type != bytes_meta.expected_msg_types {
                     warn!(
                         "peer {} (party {}) says: msg_in share id {} gave conflicting expected message types",
@@ -102,6 +103,7 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
                 *msg_type
             }
             None => {
+               
                 self.expected_msg_types
                     .set(bytes_meta.from, bytes_meta.expected_msg_types)?;
                 bytes_meta.expected_msg_types
@@ -179,19 +181,24 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
     }
 
     pub fn expecting_more_msgs_this_round(&self) -> bool {
+     
         debug_assert_eq!(self.expected_msg_types.size(), self.bcasts_in.size());
         debug_assert_eq!(self.expected_msg_types.size(), self.p2ps_in.size());
-
+debug!("---------------------------------------------------------------------");
         for (_from, expected_msg_type_option, bcast_option, p2ps) in
             zip3(&self.expected_msg_types, &self.bcasts_in, &self.p2ps_in)
         {
             if let Some(expected_msg_type) = expected_msg_type_option {
+                debug!("party {} needs p2p: {}",self.info().party_id().to_string(), matches!(expected_msg_type, BcastAndP2p));
                 if (matches!(expected_msg_type, BcastAndP2p | BcastOnly) && bcast_option.is_none())
                     || (matches!(expected_msg_type, BcastAndP2p | P2pOnly) && !p2ps.is_full())
                 {
+                  
+                   // print!("{:?}", self.expected_msg_types);
                     return true;
                 }
             } else {
+               
                 return true; // this party has not yet sent any messages
             }
         }
@@ -280,9 +287,13 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
                 );
                 return Err(TofnFatal);
             }
-            (None, Some(_)) => P2pOnly,
+            (None, Some(_)) => {
+            
+                P2pOnly},
             (Some(_), None) => BcastOnly,
-            (Some(_), Some(_)) => BcastAndP2p,
+            (Some(_), Some(_)) => {
+              debug!("round: {} ");
+                BcastAndP2p},
         };
         // can't use Option::map because closure returns Result and uses ? operator
         let bcast_out = match bcast_out {
