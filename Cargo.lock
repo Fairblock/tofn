@@ -1255,6 +1255,8 @@ dependencies = [
  "hmac",
  "k256",
  "libpaillier",
+ "num-bigint",
+ "num-traits 0.2.15",
  "rand",
  "rand_chacha",
  "serde",

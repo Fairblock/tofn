@@ -1,4 +1,4 @@
-use super::r1::{self};
+use super::{r1::{self}, r3};
 use crate::{
     collections::{TypedUsize, VecMap},
     crypto_tools::{
@@ -41,7 +41,7 @@ pub struct KeygenPartyId;
 pub type KeygenProtocol = Protocol<SecretKeyShare, KeygenShareId, KeygenPartyId, MAX_MSG_LEN>;
 pub type KeygenProtocolBuilder = ProtocolBuilder<SecretKeyShare, KeygenShareId>;
 pub type KeygenPartyShareCounts = PartyShareCounts<KeygenPartyId>;
-
+pub type Disputes = r3::P2pSad;
 #[derive(Debug, Clone)]
 
 pub struct PartyKeyPair {

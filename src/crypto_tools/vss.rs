@@ -5,13 +5,16 @@ use crate::{
     
 };
 use serde::{Serialize, Serializer, ser::SerializeStruct,ser::SerializeSeq, Deserializer};
-use std::convert::TryInto;
+use core::panic;
+use std::{convert::TryInto, fmt};
 use group::{GroupEncoding, ff::PrimeField};
 use bincode::{config::BigEndian};
 use rand::Rng;
+use num_bigint::BigUint;
+use num_traits::{Num, ToPrimitive, FromPrimitive};
 //use k256::elliptic_curve::Field;
 use serde::{Deserialize};
-use tracing::error;
+use tracing::{error, debug};
 use zeroize::Zeroize;
 use rand::RngCore;
 use sha2::{Digest, Sha256};
@@ -268,7 +271,18 @@ impl From<Share> for (bls12_381::Scalar, usize) {
         (scalar, share.index)
     }
 }
-
+impl<'de> Deserialize<'de> for Share {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        
+        let (c, r) = <([u8;32], usize)>::deserialize(deserializer)?;
+        let shareScalar = bls12_381::Scalar::from_bytes(&c).unwrap();
+    
+        Ok(Share { scalar:shareScalar, index: r })
+    }
+}
 impl Serialize for Share {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -310,18 +324,22 @@ impl Proof{
 
 
 pub fn generate_proof( point_g: &bls12_381::G1Projective, public_key_i: &bls12_381::G1Projective, public_key_j: &bls12_381::G1Projective, encryption_key_ij: &bls12_381::G1Projective, secret_key_j: &BlsScalar) -> Result<([u8; 32], [u8;32]), Box<dyn Error>> {
-    let one = 1;
+    let one = BigUint::from_i32(1).unwrap();
     let order = "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001";
-    let group_order = i64::from_str_radix(order, 16).unwrap();
+
+
+
+    let group_order = BigUint::parse_bytes(order.as_bytes(), 16).unwrap();
+
 
     let max = group_order - &one;
     
     let mut rng = rand::thread_rng();
-    let mut w_bytes = vec![0u8; max.try_into().unwrap() ];
-    rng.fill_bytes(&mut w_bytes[..]);
-    let text_as_string = core::str::from_utf8(&w_bytes).map_err(|_| "not a string")?;
-    let mut w: u64 = text_as_string.parse().map_err(|_| "not a number")?;
-   
+    // let mut w_bytes = vec![0u8];
+    // rng.fill_bytes(&mut w_bytes[..]);
+    // let text_as_string = core::str::from_utf8(&w_bytes).map_err(|_| "not a string")?;
+    // let mut w: u64 = text_as_string.parse().map_err(|_| "not a number")?;
+    let mut w: u64 = rng.gen();
     // let mut w = (&w_bytes) as ;
     w = w + 1;
 
@@ -337,18 +355,28 @@ pub fn generate_proof( point_g: &bls12_381::G1Projective, public_key_i: &bls12_3
     t2 =  public_key_i * omega;
 
     let concat = format!("{}{}{}{}{}{}", point_g.to_string(), public_key_j.to_string(), public_key_i.to_string(), encryption_key_ij.to_string(), t1.to_string(), t2.to_string());
+    
     let mut hasher = Sha256::new();
     hasher.update(concat.as_bytes());
     let c = hasher.finalize();
-
-    let hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&[c.as_slice()[0];32]);
+    
+    let mut hash_bytes = [0u8; 32];
+hash_bytes.copy_from_slice(&c);
+debug!("{:?}",hash_bytes);
+//let hash2_kyber_scalar = Scalar::from_bytes(&hash_bytes);
+    let hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&hash_bytes);
+    debug!("scalar: {:?}",hash2_kyber_scalar);
+   let u = &hash2_kyber_scalar.unwrap();
+    debug!("okkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
     let mut r = secret_key_j;
-    let binding = (r * &hash2_kyber_scalar.unwrap());
+    debug!("hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
+    let binding = (r * u);
+   
     // r = &(r * &hash2_kyber_scalar.unwrap());
     binding.neg();
     let binding = (binding + &omega);
     r = &binding;
-
+  
     Ok((c.into(), r.to_bytes()))
 }
 

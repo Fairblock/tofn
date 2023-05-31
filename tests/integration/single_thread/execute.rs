@@ -15,7 +15,7 @@ where
     let mut current_round = 0;
 
     while nobody_done(&parties) {
-        debug!(current_round);
+      //  debug!(current_round);
         current_round += 1;
         
         parties = next_round(parties, current_round)?;

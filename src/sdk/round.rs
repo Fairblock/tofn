@@ -103,7 +103,7 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
                 *msg_type
             }
             None => {
-               
+               debug!("None : party: {}, type is bcast and p2p {}", self.info().party_id(), matches!(bytes_meta.expected_msg_types, BcastAndP2p));
                 self.expected_msg_types
                     .set(bytes_meta.from, bytes_meta.expected_msg_types)?;
                 bytes_meta.expected_msg_types
@@ -184,12 +184,12 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
      
         debug_assert_eq!(self.expected_msg_types.size(), self.bcasts_in.size());
         debug_assert_eq!(self.expected_msg_types.size(), self.p2ps_in.size());
-debug!("---------------------------------------------------------------------");
+//debug!("---------------------------------------------------------------------");
         for (_from, expected_msg_type_option, bcast_option, p2ps) in
             zip3(&self.expected_msg_types, &self.bcasts_in, &self.p2ps_in)
         {
             if let Some(expected_msg_type) = expected_msg_type_option {
-                debug!("party {} needs p2p: {}",self.info().party_id().to_string(), matches!(expected_msg_type, BcastAndP2p));
+             //   debug!("party {} needs p2p: {}",self.info().party_id().to_string(), matches!(expected_msg_type, BcastAndP2p));
                 if (matches!(expected_msg_type, BcastAndP2p | BcastOnly) && bcast_option.is_none())
                     || (matches!(expected_msg_type, BcastAndP2p | P2pOnly) && !p2ps.is_full())
                 {
@@ -280,21 +280,25 @@ debug!("---------------------------------------------------------------------");
         // bundle metadata into outgoing messages
         let expected_msg_types = match (&bcast_out, &p2ps_out) {
             (None, None) => {
-                error!(
-                    "peer {} (party {}) says: rounds must send at least one outgoing message",
-                    my_share_id,
-                    info.party_id(),
-                );
-                return Err(TofnFatal);
-            }
+                // error!(
+                //     "peer {} (party {}) says: rounds must send at least one outgoing message",
+                //     my_share_id,
+                //     info.party_id(),
+                // );
+                // return Err(TofnFatal);
+                BcastOnly }
             (None, Some(_)) => {
             
                 P2pOnly},
-            (Some(_), None) => BcastOnly,
+            (Some(_), None) => {
+            //    debug!("round: {} validator: {} bcast only ",   info.round(), info.party_id());
+                BcastOnly},
             (Some(_), Some(_)) => {
-              debug!("round: {} ");
+            //  debug!("round: {} validator: {} bcast and p2p ",   info.round(), info.party_id());
                 BcastAndP2p},
         };
+      
+       
         // can't use Option::map because closure returns Result and uses ? operator
         let bcast_out = match bcast_out {
             Some(payload) => Some(wire_bytes::encode_message(

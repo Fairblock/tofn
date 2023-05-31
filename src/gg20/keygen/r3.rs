@@ -1,10 +1,12 @@
+use bls12_381::G1Affine;
 use rand::seq::index;
-use serde::{Deserialize, Serialize, Serializer, ser::SerializeStruct};
-use tracing::warn;
-
+use serde::{Deserialize, Serialize, Serializer, ser::SerializeStruct, Deserializer};
+//use tracing::warn;
+//se tracing_subscriber::field::debug;
+use tracing::{warn, debug};
 use crate::{
     collections::{FillVecMap, P2ps, VecMap},
-    crypto_tools::{constants, hash, vss::{self, Proof}, enc::Key},
+    crypto_tools::{constants, hash, vss::{self, Proof, Commit}, enc::Key},
     gg20::keygen::{r4, SecretKeyShare},
     sdk::{
         api::{Fault::{ProtocolFault, self}, TofnFatal, TofnResult},
@@ -14,7 +16,7 @@ use crate::{
     },
 };
 use vec_map::VecMap as DVecMap;
-use std::convert::TryInto;
+use std::{convert::TryInto, fmt};
 use crate::crypto_tools::enc::EncDec;
 use super::{r1, r2, KeygenPartyShareCounts, KeygenShareId};
 use group::GroupEncoding;
@@ -28,9 +30,9 @@ pub(super) struct BcastHappy {
 
 
 
-#[derive(Debug, Clone, Serialize)]
-pub(super) struct P2pSad {
-    pub(super) vss_complaint: Option<ShareInfoDispute>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct P2pSad {
+    pub(super) vss_complaint: Vec<ShareInfoDispute>,
 }
 
 #[derive(Debug, Clone,Serialize)]
@@ -43,18 +45,104 @@ pub(super) struct ShareInfo {
 pub(super) struct ShareInfoDispute {
     pub(super) share: vss::Share,
     pub(super) kij: bls12_381::G1Projective,
-    pub(super) proof: ([u8; 32], [u8;32])
+    pub(super) proof: ([u8; 32], [u8;32]),
+    pub(super) commit: Commit,
+    pub(super) faulter: bls12_381::G1Projective,
+    pub(super) accuser: bls12_381::G1Projective,
 }
+impl<'de> Deserialize<'de> for ShareInfoDispute {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        
+        let (share, mut r, p, c, mut f,mut a) = <(vss::Share, [u8;32], ([u8; 32], [u8;32]), Commit, [u8;32], [u8;32])>::deserialize(deserializer)?;
+      let r_vec: & [u8] = r.as_mut();
+        let kij = G1Affine::from_compressed(r_vec.try_into().unwrap()).unwrap().into();
+        let key_vec: & [u8] = f.as_mut();
+        let key = G1Affine::from_compressed(key_vec.try_into().unwrap()).unwrap().into();
+        let mykey_vec: & [u8] = a.as_mut();
+        let mykey = G1Affine::from_compressed(mykey_vec.try_into().unwrap()).unwrap().into();
+        Ok(ShareInfoDispute { share: share, kij: kij, proof: p , commit:c, faulter: key, accuser: mykey} )
+    }
+}
+// impl<'de> Deserialize<'de> for ShareInfoDispute {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         #[derive(Deserialize)]
+//         #[serde(field_identifier, rename_all = "snake_case")]
+//         enum Field {
+//             Share,
+//             Kij,
+//             Proof,
+//         }
+
+//         struct ShareInfoDisputeVisitor;
+
+//         impl<'de> serde::de::Visitor<'de> for ShareInfoDisputeVisitor {
+//             type Value = ShareInfoDispute;
+
+//             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//                 formatter.write_str("struct ShareInfoDispute")
+//             }
+
+//             fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
+//             where
+//                 V: serde::de::MapAccess<'de>,
+//             {
+//                 let mut share = None;
+//                 let mut kij = None;
+//                 let mut proof = None;
+
+//                 while let Some(key) = map.next_key()? {
+//                     match key {
+//                         Field::Share => {
+//                             if share.is_some() {
+//                                 return Err(serde::de::Error::duplicate_field("share"));
+//                             }
+//                             share = Some(map.next_value()?);
+//                         }
+//                         Field::Kij => {
+//                             if kij.is_some() {
+//                                 return Err(serde::de::Error::duplicate_field("kij"));
+//                             }
+                            
+//                         }
+//                         Field::Proof => {
+//                             if proof.is_some() {
+//                                 return Err(serde::de::Error::duplicate_field("proof"));
+//                             }
+//                             proof = Some(map.next_value()?);
+//                         }
+//                     }
+//                 }
+
+//                 let share = share.ok_or_else(|| serde::de::Error::missing_field("share"))?;
+//                 let kij = ;
+//                 let proof = proof.ok_or_else(|| serde::de::Error::missing_field("proof"))?;
+
+//                 Ok(ShareInfoDispute { share, kij, proof })
+//             }
+//         }
+
+//         deserializer.deserialize_map(ShareInfoDisputeVisitor)
+//     }
+// }
 
 impl Serialize for ShareInfoDispute {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut shareDispute = serializer.serialize_struct("ShareInfoDispute",3).unwrap();
+        let mut shareDispute = serializer.serialize_struct("ShareInfoDispute",6).unwrap();
         shareDispute.serialize_field("share", &self.share)?;
         shareDispute.serialize_field("kij", &self.kij.to_bytes().as_ref())?;
         shareDispute.serialize_field("proof", &self.proof)?;
+        shareDispute.serialize_field("commit", &self.commit)?;
+        shareDispute.serialize_field("faulter", &self.faulter.to_bytes().as_ref())?;
+        shareDispute.serialize_field("accuser", &self.accuser.to_bytes().as_ref())?;
         shareDispute.end()
         
     }
@@ -198,41 +286,69 @@ impl Executer for R3 {
         // }
      
         let kijs = self.kij.clone();
-       
+     //  debug!("p2ps in {:?}",p2ps_in);
+      
+    
         // decrypt shares
         let share_infos = p2ps_in.map_to_me(my_keygen_id, |p2p| {
            
-          
-            let k = kijs.get(p2p.id).unwrap().to_bytes();
+        //  debug!(" p2p id {}, my id {}, p2p: {:?}",p2p.id,my_keygen_id.as_usize(), p2p);
+           if p2p.id == my_keygen_id.as_usize() {
+         //   debug!("correct!!!");
+            let k = kijs.get(p2p.from).unwrap().to_bytes();
+            
             let kRef = k.as_ref();
             let mut dest_array: [u8; 32] = [0u8;32];
             dest_array.copy_from_slice(&kRef[..32]);
-            let u_i_share_plaintext = Key::decrypt(dest_array,p2p.u_i_share_ciphertext);
+            let u_i_share_plaintext = Key::decrypt(dest_array,p2p.u_i_share_ciphertext[0..16].try_into().unwrap());
+           let s = u_i_share_plaintext.as_slice();
+
+           let mut destination_array: [u8; 32] = [0; 32];
+
+           destination_array[..s.len()].copy_from_slice(&s);
+           destination_array[s.len()..].copy_from_slice(&p2p.u_i_share_ciphertext[16..]);
+           debug!("decrypted : {:?}", destination_array);
             let u_i_share =
-                vss::Share::from_scalar(bls12_381::Scalar::from_bytes(u_i_share_plaintext.as_slice().try_into().unwrap()).unwrap() , my_keygen_id.as_usize());
+                vss::Share::from_scalar(bls12_381::Scalar::from_bytes(&destination_array).unwrap() , my_keygen_id.as_usize());
 
             ShareInfo {
                 share: u_i_share,
                 
+            }}else{
+             //   debug!("wrong!!!");
+                ShareInfo {
+                    share: self.u_i_share.clone(),
+                    
+                }
             }
         })?;
 
         // validate shares
-        
+        let mut vss_complaints_vec: Vec<ShareInfoDispute> = Vec::new();
         let vss_complaints = share_infos.ref_map2_result(|(peer_keygen_id, share_info)| {
+            debug!("decrypted share: {:?}",share_info.share);
             Ok(
+                
                 if !bcasts_in
                     .get(peer_keygen_id)?
                     .u_i_vss_commit
                     .validate_share(&share_info.share)
                 {
+                    let commit = bcasts_in
+                    .get(peer_keygen_id)?
+                    .u_i_vss_commit.clone();
                     let key =  self.r1bcasts
             .get(peer_keygen_id)?
             .ek;
+        let my_key = self.r1bcasts
+        .get(my_keygen_id)?
+        .ek;
                     log_accuse_warn(my_keygen_id, peer_keygen_id, "invalid vss share");
-                    Some(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: vss::Proof::generate_proof(&bls12_381::G1Projective::generator(),&key,&(self.dk*bls12_381::G1Projective::generator()),self.kij.get(peer_keygen_id.as_usize()).unwrap(),&self.dk).unwrap() })
+                    let p = vss::Proof::generate_proof(&bls12_381::G1Projective::generator(),&key,&(self.dk*bls12_381::G1Projective::generator()),self.kij.get(peer_keygen_id.as_usize()).unwrap(),&self.dk).unwrap();
+                   vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key });
                 } else {
-                    None
+                   // debug!("No complaint");
+                    
                 },
             )
         })?;
@@ -241,11 +357,32 @@ impl Executer for R3 {
             vss_complaints,
             self.corrupt_complaint(my_keygen_id, &share_infos, vss_complaints)?
         );
-
+if vss_complaints_vec.len() == 0{
+    Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
+        Box::new(r4::R4Happy {
+            threshold: self.threshold,
+            party_share_counts: self.party_share_counts,
+            dk: self.dk,
+            kij:self.kij.clone(),
+            u_i_share: self.u_i_share,
+            r1bcasts: self.r1bcasts,
+            r2bcasts: bcasts_in,
+            r2p2ps: p2ps_in,
+            faulters:faulters,
+         
+        }),
+        None,
+        None
+        
+    ))) 
+    
+}else{
+    let bcast = serde_json::to_string(&P2pSad { vss_complaint: vss_complaints_vec.clone()}).unwrap();
      let bcast_out = Some(
-                vss_complaints
-                    .map2_result(|(_, vss_complaint)| serialize(&P2pSad { vss_complaint }))?,
+               bcast.as_bytes().to_vec()
             );
+          
+            debug!("bcastout:{:?}", bcast);
             Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
                 Box::new(r4::R4Happy {
                     threshold: self.threshold,
@@ -259,12 +396,13 @@ impl Executer for R3 {
                     faulters:faulters,
                  
                 }),
-                None,
                 bcast_out,
+                None
+                
             )))
            
         
-
+        }
 
      
      

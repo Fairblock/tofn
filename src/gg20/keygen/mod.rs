@@ -3,8 +3,8 @@ pub use api::*;
 
 mod r1;
 mod r2;
-mod r3;
-mod r4;
+pub mod r3;
+pub mod r4;
 mod secret_key_share;
 
 #[cfg(test)]

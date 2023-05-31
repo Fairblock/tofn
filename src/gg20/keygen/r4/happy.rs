@@ -115,19 +115,26 @@ impl Executer for R4Happy {
         //         ))
         //     })
         //     .collect::<TofnResult<VecMap<_, _>>>()?;
-        let kijs = self.kij;
+        let kijs: DVecMap<bls12_381::G1Projective> = self.kij;
         let my_keygen_id = info.my_id();
-        let p2ps_in = p2ps_in.to_fullp2ps()?;
+        let p2ps_in = self.r2p2ps;
         let share_infos = p2ps_in.map_to_me(my_keygen_id, |p2p| {
            
           
-            let k = kijs.get(p2p.id).unwrap().to_bytes();
+            let k = kijs.get(p2p.from).unwrap().to_bytes();
             let kRef = k.as_ref();
             let mut dest_array: [u8; 32] = [0u8;32];
             dest_array.copy_from_slice(&kRef[..32]);
-            let u_i_share_plaintext = Key::decrypt(dest_array,p2p.u_i_share_ciphertext);
+            let u_i_share_plaintext = Key::decrypt(dest_array,p2p.u_i_share_ciphertext[0..16].try_into().unwrap());
+           let s = u_i_share_plaintext.as_slice();
+
+           let mut destination_array: [u8; 32] = [0; 32];
+
+           destination_array[..s.len()].copy_from_slice(&s);
+           destination_array[s.len()..].copy_from_slice(&p2p.u_i_share_ciphertext[16..]);
+           //debug!("decrypted : {:?}", destination_array);
             let u_i_share =
-                vss::Share::from_scalar(bls12_381::Scalar::from_bytes(u_i_share_plaintext.as_slice().try_into().unwrap()).unwrap() , my_keygen_id.as_usize());
+                vss::Share::from_scalar(bls12_381::Scalar::from_bytes(&destination_array).unwrap() , my_keygen_id.as_usize());
 
             ShareInfo {
                 share: u_i_share,
@@ -163,6 +170,7 @@ impl Executer for R4Happy {
 
         corrupt!(x_i, self.corrupt_scalar(my_keygen_id, x_i));
         Ok(ProtocolBuilder::Done(Ok(SecretKeyShare::new(
+            y.into(),
             ShareSecretInfo::new(my_keygen_id, x_i.into()),
             GroupPublicInfo::new(
                 self.party_share_counts,

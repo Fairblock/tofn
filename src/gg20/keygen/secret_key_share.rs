@@ -20,6 +20,7 @@ use zeroize::Zeroize;
 /// final output of keygen: store this struct in tofnd kvstore
 #[derive(Debug, Clone, PartialEq)]
 pub struct SecretKeyShare {
+    pubKey : bls12_381::G1Projective,
     group: GroupPublicInfo,
     share: ShareSecretInfo,
 }
@@ -382,7 +383,7 @@ impl SecretKeyShare {
 
     // super::super so it's visible in sign
     // TODO change file hierarchy so that you need only pub(super)
-    pub(in super::super) fn new( share: ShareSecretInfo, group:GroupPublicInfo) -> Self {
-        Self { group,share }
+    pub(in super::super) fn new( pubKey: bls12_381::G1Projective, share: ShareSecretInfo, group:GroupPublicInfo) -> Self {
+        Self { pubKey, group,share }
     }
 }

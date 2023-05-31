@@ -88,11 +88,11 @@ impl<T: Executer> ExecuterRaw for T {
         // if !faulters.is_empty() {
         //     return Ok(ProtocolBuilder::Done(Err(faulters)));
         // }
-        debug!("2");
+       // debug!("2");
     
        
         let p2ps_deserialized = deserialize_p2ps(info.my_id(), p2ps_in, &mut faulters)?;
-        debug!("3");
+       // debug!("3");
         // if !faulters.is_empty() {
         //     return Ok(ProtocolBuilder::Done(Err(faulters)));
         // }
@@ -116,9 +116,9 @@ impl<T: Executer> ExecuterRaw for T {
         } else {
             p2ps_in
         };
-        debug!("2.5");
+       // debug!("2.5");
         let bcasts_in_deserialized = deserialize_bcasts(info.my_id(), bcasts_in, &mut faulters)?;
-        debug!("3.5");
+       // debug!("3.5");
         self.execute(info, bcasts_in_deserialized, p2ps_in)
     }
 
@@ -200,7 +200,7 @@ where
          
             if let Some(bytes) = bytes_option {
                 let val = deserialize(&bytes);
-                debug!("ok");
+               // debug!("ok");
                 // if {
                 //     debug!("if");
                   Ok((val))
@@ -213,7 +213,7 @@ where
                 //     Ok(None)
                 // }
             } else {
-                debug!("else");
+             //   debug!("else");
                 Ok(None)
             }
         })
