@@ -54,11 +54,11 @@ fn basic_correctness() {
         threshold,
     );
 
-    debug!("keygen...");
+  //  debug!("keygen...");
     let keygen_shares = initialize_honest_parties(&party_share_counts, threshold);
-    debug!("keygen...");
+ //   debug!("keygen...");
     let keygen_share_outputs = execute_protocol(keygen_shares).expect("internal tofn error");
-    debug!("keygen...");
+ //   debug!("keygen...");
     let secret_key_shares: VecMap<KeygenShareId, SecretKeyShare> =
         keygen_share_outputs.map2(|(keygen_share_id, keygen_share)| match keygen_share {
             Protocol::NotDone(_) => panic!("share_id {} not done yet", keygen_share_id),

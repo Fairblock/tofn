@@ -36,6 +36,7 @@ pub(super) struct Bcast {
     // pub(super) y_i_reveal: hash::Randomness,
     pub(super) u_i_vss_commit: vss::Commit,
     pub(super) faulters: FillVecMap<KeygenShareId, Fault>,
+    pub(super) id : usize
 }
 
 
@@ -50,6 +51,7 @@ pub(super) struct R2 {
     pub(super) threshold: usize,
     pub(super) party_share_counts: KeygenPartyShareCounts,
     pub(super) dk: bls12_381::Scalar,
+    pub(super) ek: bls12_381::G1Projective,
     pub(super) u_i_vss: vss::Vss,
     // pub(super) y_i_reveal: hash::Randomness,
 
@@ -58,9 +60,9 @@ pub(super) struct R2 {
 }
 impl EncDec for Key {
 	fn encrypt(_key:Self, plaintext:  [u8; 32]) -> GenericArray<u8, U16> {
-        debug!("plain: {:?}",plaintext);
+     //   debug!("plain: {:?}",plaintext);
 		let key = GenericArray::from(_key);
-		let hashvalue = Sha256::digest(&key);
+		let hashvalue = Sha256::digest(&key.as_ref());
 		let (first_half, _second_half) = hashvalue.split_at(hashvalue.len()/2);
 		let nonce = first_half;
 	
@@ -83,7 +85,7 @@ impl EncDec for Key {
 	}
 	fn decrypt(_key:Self, ciphertext:  [u8; 16])-> GenericArray<u8, U16> {
 		let key = GenericArray::from(_key);
-		let hashvalue = Sha256::digest(&key);
+		let hashvalue = Sha256::digest(&key.as_ref());
 		let (first_half, _second_half) = hashvalue.split_at(hashvalue.len()/2);
 		let nonce = first_half;
 		
@@ -162,7 +164,7 @@ impl Executer for R2 {
             let key =  bcasts_in
             .get(peer_keygen_id)?
             .ek;
-            let kij = (self.dk * key);
+            let kij = self.dk * key;
             
             let k = kij.to_bytes();
            // debug!("enc key: {:?}", k);
@@ -180,7 +182,14 @@ impl Executer for R2 {
             let mut plainSecondHalf =  &shareB.as_mut()[16..];
            // debug!("plainSecondHalf : {:?}",plainSecondHalf);
             let c: &[&[u8]] = &[encShare, plainSecondHalf];
-            let concatC = c.concat();
+            let mut concatC = c.concat();
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////// test wrong share
+            // if peer_keygen_id.as_usize() == 0 {
+            //     if my_keygen_id.as_usize() == 3{
+            //         concatC = [0u8;32].to_vec();
+            //     }
+            // }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //debug!("combined_slice : {:?}",concatC);
         //     let kRef = k.as_ref();
         //     let mut dest_array: [u8; 32] = [0u8;32];
@@ -195,7 +204,7 @@ impl Executer for R2 {
         //     let u_i_share =
         //         vss::Share::from_scalar(bls12_381::Scalar::from_bytes(&destination_array).unwrap() , my_keygen_id.as_usize());
               
-            debug!("share :{:?}", share);
+          //  debug!("share :{:?}", share);
             serialize(&P2p {
                 
                 u_i_share_ciphertext: concatC.try_into().unwrap(),
@@ -208,6 +217,7 @@ impl Executer for R2 {
             // y_i_reveal: self.y_i_reveal.clone(),
             faulters:faulters.clone(),
             u_i_vss_commit: self.u_i_vss.commit(),
+            id: my_keygen_id.as_usize()
         })?);
         debug!("r2 done");
         Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
@@ -215,6 +225,7 @@ impl Executer for R2 {
                 threshold: self.threshold,
                 party_share_counts: self.party_share_counts,
                 dk: self.dk,
+                ek:self.ek,
                 kij:kij_list,
                 u_i_share,
                 r1bcasts: bcasts_in,

@@ -14,7 +14,7 @@ use bls12_381::{Scalar, G1Projective, G1Affine};
 use group::{GroupEncoding, Curve};
 use k256::ProjectivePoint;
 use serde::{Deserialize, Serialize, Serializer, ser::SerializeStruct, Deserializer};
-use tracing::error;
+use tracing::{error, debug};
 use zeroize::Zeroize;
 
 /// final output of keygen: store this struct in tofnd kvstore
@@ -98,7 +98,7 @@ pub struct SharePublicInfo {
 
 pub struct ShareSecretInfo {
     index: TypedUsize<KeygenShareId>,
-   
+   ek: bls12_381::G1Projective,
     x_i: bls12_381::Scalar,
 }
 
@@ -107,9 +107,10 @@ impl Serialize for ShareSecretInfo {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("ShareSecretInfo", 2)?;
+        let mut state = serializer.serialize_struct("ShareSecretInfo", 3)?;
         state.serialize_field("index", &self.index)?;
         let x_i_bytes = self.x_i.to_bytes();
+        state.serialize_field("ek", &self.ek.to_bytes().as_ref())?;
         state.serialize_field("x_i", &x_i_bytes)?;
         state.end()
     }
@@ -135,11 +136,16 @@ impl<'de> Deserialize<'de> for ShareSecretInfo {
                 V: serde::de::SeqAccess<'de>,
             {
                 let index = seq.next_element().unwrap().unwrap();
+                let ek_bytes: Vec<u8> = seq.next_element().unwrap().unwrap();
+                
+                let ek = G1Affine::from_compressed(ek_bytes.as_slice().try_into().unwrap()).unwrap().into();
                 let x_i_bytes: Vec<u8> = seq.next_element().unwrap().unwrap();
                 let x_i = Scalar::from_bytes(&x_i_bytes.try_into().unwrap()).unwrap();
-
+              
+               
                 Ok(ShareSecretInfo {
                     index,
+                    ek,
                     x_i,
                 })
             }
@@ -155,7 +161,7 @@ impl<'de> Deserialize<'de> for ShareSecretInfo {
 /// this data + mnemonic can be used to recover a full `SecretKeyShare` struct.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct KeyShareRecoveryInfo {
-    x_i_ciphertext: [u8;16],
+    x_i_ciphertext: [u8;32],
 }
 
 impl GroupPublicInfo {
@@ -233,10 +239,10 @@ impl ShareSecretInfo {
 
     pub(super) fn new(
         index: TypedUsize<KeygenShareId>,
-        // dk: Key,
+         ek: bls12_381::G1Projective,
         x_i: bls12_381::Scalar,
     ) -> Self {
-        Self { index,  x_i }
+        Self { index,ek,  x_i }
     }
 
     pub(crate) fn x_i(&self) -> &bls12_381::Scalar {
@@ -257,13 +263,16 @@ impl SecretKeyShare {
         &self.share
     }
 
-    // pub fn recovery_info(&self) -> TofnResult<BytesVec> {
-    //     let index = self.share.index;
-    //     let share = self.group.all_shares.get(index)?;
-    //     let x_i_ciphertext = share.ek.encrypt(&self.share.x_i.into()).0;
+    pub fn recovery_info(&self) -> TofnResult<BytesVec> {
+        let index = self.share.index;
+        let share = self.share.clone();
+        let x_i_ciphertext = &self.share.x_i.to_bytes();
+        //share.ek.encrypt(&self.share.x_i.into()).0;
+        debug!("share tofnd: {:?}",self.share.x_i );
+        let x : [u8;16]= x_i_ciphertext[..16].try_into().expect("Array size mismatch");
 
-    //     encode(&KeyShareRecoveryInfo { x_i_ciphertext })
-    // }
+        encode(&KeyShareRecoveryInfo { x_i_ciphertext: *x_i_ciphertext })
+    }
 
     // /// Recover a `SecretKeyShare`
     // /// We trust that group_info_bytes and pubkey_bytes are the values computed
@@ -272,7 +281,7 @@ impl SecretKeyShare {
     // pub fn recover(
     //     party_keypair: &PartyKeyPair,
     //     recovery_info_bytes: &[u8],
-    //     group_info_bytes: &[u8],
+     
     //     pubkey_bytes: &[u8],
     //     party_id: TypedUsize<KeygenPartyId>,
     //     subshare_id: usize, // in 0..party_share_counts[party_id]
@@ -299,46 +308,46 @@ impl SecretKeyShare {
     //     })?;
 
     //     // Since we trust group_info_bytes, we expect the order of all_shares to be correct
-    //     let all_shares: VecMap<KeygenShareId, SharePublicInfo> = decode(group_info_bytes)
-    //         .ok_or_else(|| {
-    //             error!(
-    //                 "peer {} says: failed to deserialize public share info",
-    //                 share_id
-    //             );
-    //             TofnFatal
-    //         })?;
+    //     // let all_shares: VecMap<KeygenShareId, SharePublicInfo> = decode(group_info_bytes)
+    //     //     .ok_or_else(|| {
+    //     //         error!(
+    //     //             "peer {} says: failed to deserialize public share info",
+    //     //             share_id
+    //     //         );
+    //     //         TofnFatal
+    //     //     })?;
 
-    //     if all_shares.len() != share_count {
-    //         error!(
-    //             "peer {} says: only received {} public shares, expected {}",
-    //             share_id,
-    //             all_shares.len(),
-    //             share_count
-    //         );
-    //         return Err(TofnFatal);
-    //     }
+    //     // if all_shares.len() != share_count {
+    //     //     error!(
+    //     //         "peer {} says: only received {} public shares, expected {}",
+    //     //         share_id,
+    //     //         all_shares.len(),
+    //     //         share_count
+    //     //     );
+    //     //     return Err(TofnFatal);
+    //     // }
 
     //     // recover my Paillier keys
-    //     let ek = &party_keypair.ek;
-    //     let dk = party_keypair.dk.clone();
+    //     let ek = &party_keypair.enc_key;
+    //     let dk = party_keypair.dec_key.clone();
 
     //     // verify recovery of the correct Paillier keys
-    //     if ek != &all_shares.get(share_id)?.ek {
-    //         error!("peer {} says: recovered ek mismatch", share_id);
-    //         return Err(TofnFatal);
-    //     }
+    //     // if ek != &all_shares.get(share_id)?.ek {
+    //     //     error!("peer {} says: recovered ek mismatch", share_id);
+    //     //     return Err(TofnFatal);
+    //     // }
 
     //     // prepare output
-    //     let x_i = dk.decrypt(&recovery_info.x_i_ciphertext).to_scalar();
+    //   //  let x_i = dk.decrypt(&recovery_info.x_i_ciphertext).to_scalar();
 
     //     // verify recovery of x_i using X_i
     //     #[allow(non_snake_case)]
     //     let X_i = &(ProjectivePoint::generator() * x_i);
 
-    //     if X_i != all_shares.get(share_id)?.X_i.as_ref() {
-    //         error!("peer {} says: recovered X_i mismatch", share_id);
-    //         return Err(TofnFatal);
-    //     }
+    //     // if X_i != all_shares.get(share_id)?.X_i.as_ref() {
+    //     //     error!("peer {} says: recovered X_i mismatch", share_id);
+    //     //     return Err(TofnFatal);
+    //     // }
 
     //     let share_commits = &all_shares
     //         .iter()
@@ -349,37 +358,38 @@ impl SecretKeyShare {
 
     //     // verify that the provided pubkey matches the group key from the public shares
     //     let y = vss::recover_secret_commit(share_commits, threshold)?.into();
-    //     let pub_key = bls12_381::G1Projective::from_bytes(pubkey_bytes).ok_or_else(|| {
-    //         error!("peer {} says: failed to decode group public key", share_id);
-    //         TofnFatal
-    //     })?;
+    //     // let pub_key = bls12_381::G1Projective::from_bytes(pubkey_bytes).ok_or_else(|| {
+    //     //     error!("peer {} says: failed to decode group public key", share_id);
+    //     //     TofnFatal
+    //     // })?;
 
-    //     if y != pub_key {
-    //         error!(
-    //             "peer {} says: recovered group public key mismatch",
-    //             share_id
-    //         );
-    //         return Err(TofnFatal);
-    //     }
+    //     // if y != pub_key {
+    //     //     error!(
+    //     //         "peer {} says: recovered group public key mismatch",
+    //     //         share_id
+    //     //     );
+    //     //     return Err(TofnFatal);
+    //     // }
 
     //     // NOTE: We're assuming that all_shares[share_id].zkp is correct
     //     // Verifying this would require regenerating the safe keypair for the ZkSetup too
     //     // And doesn't provide much benefit since we already trust the group_info_bytes
 
     //     Ok(Self {
+    //         pubKey:y,
     //         group: GroupPublicInfo {
     //             party_share_counts,
     //             threshold,
     //             y,
-    //             all_shares,
+              
     //         },
     //         share: ShareSecretInfo {
     //             index: share_id,
-    //             dk,
+    //             ek: *ek,
     //             x_i: x_i.into(),
     //         },
     //     })
-    // }
+  //  }
 
     // super::super so it's visible in sign
     // TODO change file hierarchy so that you need only pub(super)

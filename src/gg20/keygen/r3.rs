@@ -45,10 +45,12 @@ pub(super) struct ShareInfo {
 pub(super) struct ShareInfoDispute {
     pub(super) share: vss::Share,
     pub(super) kij: bls12_381::G1Projective,
-    pub(super) proof: ([u8; 32], [u8;32]),
+    pub(super) proof: ([u8; 32], [u8;32],[u8;32]),
     pub(super) commit: Commit,
     pub(super) faulter: bls12_381::G1Projective,
     pub(super) accuser: bls12_381::G1Projective,
+    pub(super) accuserId: usize,
+    pub(super) faulterId: usize,
 }
 impl<'de> Deserialize<'de> for ShareInfoDispute {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -56,14 +58,14 @@ impl<'de> Deserialize<'de> for ShareInfoDispute {
         D: Deserializer<'de>,
     {
         
-        let (share, mut r, p, c, mut f,mut a) = <(vss::Share, [u8;32], ([u8; 32], [u8;32]), Commit, [u8;32], [u8;32])>::deserialize(deserializer)?;
+        let (share, mut r, p, c, mut f,mut a, aid,fid) = <(vss::Share, [u8;32], ([u8; 32], [u8;32], [u8;32]), Commit, [u8;32], [u8;32], usize,usize)>::deserialize(deserializer)?;
       let r_vec: & [u8] = r.as_mut();
         let kij = G1Affine::from_compressed(r_vec.try_into().unwrap()).unwrap().into();
         let key_vec: & [u8] = f.as_mut();
         let key = G1Affine::from_compressed(key_vec.try_into().unwrap()).unwrap().into();
         let mykey_vec: & [u8] = a.as_mut();
         let mykey = G1Affine::from_compressed(mykey_vec.try_into().unwrap()).unwrap().into();
-        Ok(ShareInfoDispute { share: share, kij: kij, proof: p , commit:c, faulter: key, accuser: mykey} )
+        Ok(ShareInfoDispute { share: share, kij: kij, proof: p , commit:c, faulter: key, accuser: mykey,accuserId:aid,faulterId:fid} )
     }
 }
 // impl<'de> Deserialize<'de> for ShareInfoDispute {
@@ -136,13 +138,15 @@ impl Serialize for ShareInfoDispute {
     where
         S: Serializer,
     {
-        let mut shareDispute = serializer.serialize_struct("ShareInfoDispute",6).unwrap();
+        let mut shareDispute = serializer.serialize_struct("ShareInfoDispute",8).unwrap();
         shareDispute.serialize_field("share", &self.share)?;
         shareDispute.serialize_field("kij", &self.kij.to_bytes().as_ref())?;
         shareDispute.serialize_field("proof", &self.proof)?;
         shareDispute.serialize_field("commit", &self.commit)?;
         shareDispute.serialize_field("faulter", &self.faulter.to_bytes().as_ref())?;
         shareDispute.serialize_field("accuser", &self.accuser.to_bytes().as_ref())?;
+        shareDispute.serialize_field("accuserId", &self.accuserId)?;
+        shareDispute.serialize_field("faulterId", &self.faulterId)?;
         shareDispute.end()
         
     }
@@ -152,6 +156,7 @@ pub(super) struct R3 {
     pub(super) threshold: usize,
     pub(super) party_share_counts: KeygenPartyShareCounts,
     pub(super) dk: bls12_381::Scalar,
+    pub(super) ek: bls12_381::G1Projective,
     pub(super) kij: DVecMap<bls12_381::G1Projective>,
     pub(super) u_i_share: vss::Share,
     pub(super) r1bcasts: VecMap<KeygenShareId, r1::Bcast>,
@@ -175,7 +180,7 @@ impl Executer for R3 {
     ) -> TofnResult<ProtocolBuilder<Self::FinalOutput, Self::Index>> {
         let my_keygen_id = info.my_id();
         let mut faulters = self.faulters.clone();
-
+        debug!("r3 start");
         // anyone who did not send a bcast is a faulter
         for (peer_keygen_id, bcast) in bcasts_in.iter() {
             if bcast.is_none() {
@@ -307,7 +312,7 @@ impl Executer for R3 {
 
            destination_array[..s.len()].copy_from_slice(&s);
            destination_array[s.len()..].copy_from_slice(&p2p.u_i_share_ciphertext[16..]);
-           debug!("decrypted : {:?}", destination_array);
+         //  debug!("decrypted : {:?}", destination_array);
             let u_i_share =
                 vss::Share::from_scalar(bls12_381::Scalar::from_bytes(&destination_array).unwrap() , my_keygen_id.as_usize());
 
@@ -324,9 +329,11 @@ impl Executer for R3 {
         })?;
 
         // validate shares
+        
         let mut vss_complaints_vec: Vec<ShareInfoDispute> = Vec::new();
         let vss_complaints = share_infos.ref_map2_result(|(peer_keygen_id, share_info)| {
-            debug!("decrypted share: {:?}",share_info.share);
+          //  debug!("decrypted share: {:?}",share_info.share);
+       
             Ok(
                 
                 if !bcasts_in
@@ -345,8 +352,46 @@ impl Executer for R3 {
         .ek;
                     log_accuse_warn(my_keygen_id, peer_keygen_id, "invalid vss share");
                     let p = vss::Proof::generate_proof(&bls12_381::G1Projective::generator(),&key,&(self.dk*bls12_381::G1Projective::generator()),self.kij.get(peer_keygen_id.as_usize()).unwrap(),&self.dk).unwrap();
-                   vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key });
+                   let cc = serialize(&commit);
+                   debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
+                   vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
                 } else {
+                //     if my_keygen_id.as_usize() == 2{
+                //         if peer_keygen_id.as_usize() == 1{
+                //             debug!("this one!----------------------------------------------------------");
+                //             let commit = bcasts_in
+                //             .get(peer_keygen_id)?
+                //             .u_i_vss_commit.clone();
+                //             let key =  self.r1bcasts
+                //     .get(peer_keygen_id)?
+                //     .ek;
+                // let my_key = self.r1bcasts
+                // .get(my_keygen_id)?
+                // .ek;
+                //             log_accuse_warn(my_keygen_id, peer_keygen_id, "invalid vss share");
+                //             let p = vss::Proof::generate_proof(&bls12_381::G1Projective::generator(),&key,&(self.dk*bls12_381::G1Projective::generator()),self.kij.get(peer_keygen_id.as_usize()).unwrap(),&self.dk).unwrap();
+                //            let cc = serialize(&commit);
+                //            debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
+                //            vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
+                //         }}
+                    //     if my_keygen_id.as_usize() == 3{
+                    //         if peer_keygen_id.as_usize() == 4{
+                    //             debug!("this one!----------------------------------------------------------");
+                    //             let commit = bcasts_in
+                    //             .get(peer_keygen_id)?
+                    //             .u_i_vss_commit.clone();
+                    //             let key =  self.r1bcasts
+                    //     .get(peer_keygen_id)?
+                    //     .ek;
+                    // let my_key = self.r1bcasts
+                    // .get(my_keygen_id)?
+                    // .ek;
+                    //             log_accuse_warn(my_keygen_id, peer_keygen_id, "invalid vss share");
+                    //             let p = vss::Proof::generate_proof(&bls12_381::G1Projective::generator(),&key,&(self.dk*bls12_381::G1Projective::generator()),self.kij.get(peer_keygen_id.as_usize()).unwrap(),&self.dk).unwrap();
+                    //            let cc = serialize(&commit);
+                    //            debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
+                    //            vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
+                    //         }}
                    // debug!("No complaint");
                     
                 },
@@ -357,12 +402,14 @@ impl Executer for R3 {
             vss_complaints,
             self.corrupt_complaint(my_keygen_id, &share_infos, vss_complaints)?
         );
+        debug!("r3 done");
 if vss_complaints_vec.len() == 0{
     Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
         Box::new(r4::R4Happy {
             threshold: self.threshold,
             party_share_counts: self.party_share_counts,
             dk: self.dk,
+            ek: self.ek,
             kij:self.kij.clone(),
             u_i_share: self.u_i_share,
             r1bcasts: self.r1bcasts,
@@ -382,12 +429,13 @@ if vss_complaints_vec.len() == 0{
                bcast.as_bytes().to_vec()
             );
           
-            debug!("bcastout:{:?}", bcast);
+          //  debug!("bcastout:{:?}", bcast);
             Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
                 Box::new(r4::R4Happy {
                     threshold: self.threshold,
                     party_share_counts: self.party_share_counts,
                     dk: self.dk,
+                    ek:self.ek,
                     kij:self.kij.clone(),
                     u_i_share: self.u_i_share,
                     r1bcasts: self.r1bcasts,

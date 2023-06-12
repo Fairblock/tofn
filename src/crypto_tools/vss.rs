@@ -1,12 +1,12 @@
 //! Helpers for verifiable secret sharing
 use crate::{
    
-    sdk::api::{TofnFatal, TofnResult},
+    sdk::api::{TofnFatal, TofnResult}, crypto_tools::hash,
     
 };
 use serde::{Serialize, Serializer, ser::SerializeStruct,ser::SerializeSeq, Deserializer};
 use core::panic;
-use std::{convert::TryInto, fmt};
+use std::{convert::TryInto, fmt, result};
 use group::{GroupEncoding, ff::PrimeField};
 use bincode::{config::BigEndian};
 use rand::Rng;
@@ -261,8 +261,8 @@ impl Commit {
 #[derive(Clone, Debug, PartialEq)]
 
 pub struct Share {
-    scalar: bls12_381::Scalar,
-    index: usize,
+    pub(crate) scalar: bls12_381::Scalar,
+    pub(crate) index: usize,
 }
 
 impl From<Share> for (bls12_381::Scalar, usize) {
@@ -323,7 +323,7 @@ impl<'de> Deserialize<'de> for Proof {
 impl Proof{
 
 
-pub fn generate_proof( point_g: &bls12_381::G1Projective, public_key_i: &bls12_381::G1Projective, public_key_j: &bls12_381::G1Projective, encryption_key_ij: &bls12_381::G1Projective, secret_key_j: &BlsScalar) -> Result<([u8; 32], [u8;32]), Box<dyn Error>> {
+pub fn generate_proof( point_g: &bls12_381::G1Projective, public_key_i: &bls12_381::G1Projective, public_key_j: &bls12_381::G1Projective, encryption_key_ij: &bls12_381::G1Projective, secret_key_j: &BlsScalar) -> Result<([u8; 32], [u8;32], [u8;32]), Box<dyn Error>> {
     let one = BigUint::from_i32(1).unwrap();
     let order = "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001";
 
@@ -353,31 +353,51 @@ pub fn generate_proof( point_g: &bls12_381::G1Projective, public_key_i: &bls12_3
  
  
     t2 =  public_key_i * omega;
-
-    let concat = format!("{}{}{}{}{}{}", point_g.to_string(), public_key_j.to_string(), public_key_i.to_string(), encryption_key_ij.to_string(), t1.to_string(), t2.to_string());
-    
+   
+    let concat = format!("{:?}{:?}{:?}{:?}{:?}{:?}", (*point_g).to_bytes(), public_key_j.to_bytes(), public_key_i.to_bytes(), encryption_key_ij.to_bytes(), t1.to_bytes(), t2.to_bytes());
+    debug!("concat:{}",concat);
     let mut hasher = Sha256::new();
     hasher.update(concat.as_bytes());
     let c = hasher.finalize();
-    
-    let mut hash_bytes = [0u8; 32];
-hash_bytes.copy_from_slice(&c);
-debug!("{:?}",hash_bytes);
+    debug!("c : {:?}", c);
+    let mut hash_bytes: [u8; 32] = [0u8; 32];
+    let mut result: [u8; 32] = [0u8; 32];
+    hash_bytes.copy_from_slice(&c.as_ref());
+    //debug!("{:?}",hash_bytes);
+ 
 //let hash2_kyber_scalar = Scalar::from_bytes(&hash_bytes);
-    let hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&hash_bytes);
-    debug!("scalar: {:?}",hash2_kyber_scalar);
+    let mut hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&hash_bytes);
+    while hash2_kyber_scalar.is_some().unwrap_u8() == 0{
+        debug!("here");
+    let gorder= order.as_bytes();
+    for i in 0..32 {
+        result[i] = hash_bytes[i].wrapping_sub(gorder[i]);
+    }
+    hash_bytes = result;
+    hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&result);
+}
    let u = &hash2_kyber_scalar.unwrap();
-    debug!("okkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
-    let mut r = secret_key_j;
-    debug!("hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
-    let binding = (r * u);
+  //  debug!("okkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
+    let s = secret_key_j;
+ //   debug!("hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
+    let binding = s * u;
    
     // r = &(r * &hash2_kyber_scalar.unwrap());
-    binding.neg();
-    let binding = (binding + &omega);
-    r = &binding;
-  
-    Ok((c.into(), r.to_bytes()))
+    let b = binding.neg();
+    let r = b + omega;
+   // r = &binding;
+    let pkrec = public_key_j * u;
+    let tp = point_g * r;
+    //let tpp = bls12_381::G1Projective::Mul::mul(r, point_g) //+ 
+   // debug!("t1prime : {:?}",tp.to_bytes());  
+//     debug!("t1:{:?}", t1.to_bytes());
+//     debug!("t2:{:?}", t2.to_bytes());
+// // debug!("x1t :{:?}", tp.to_bytes());
+// // debug!("y1t:{:?}",pkrec.to_bytes());
+//    debug!("r: {:?}", r.to_bytes());
+  // debug!("c: {:?}", (*u).to_bytes());
+   // debug!("g:{:?} - pkj:{:?} - pki:{:?} - ek:{:?} - c:{:?} - r:{:?}", point_g.to_bytes(),public_key_j.to_bytes(),public_key_i.to_bytes(), encryption_key_ij.to_bytes(), u.to_bytes(),r.to_bytes());
+    Ok(((*u).to_bytes(), r.to_bytes(), c.into()))
 }
 
 }
@@ -462,13 +482,13 @@ pub mod malicious {
     }
 }
 
-#[cfg(test)]
-pub(crate) fn recover_secret(shares: &[Share]) -> bls12_381::Scalar {
+pub fn recover_secret(shares: &[Share]) -> bls12_381::Scalar {
     let indices: Vec<usize> = shares.iter().map(|s| s.index).collect();
     shares
         .iter()
         .enumerate()
         .fold(bls12_381::Scalar::zero(), |sum, (i, share)| {
+          //  debug!("coeff {:?}",lagrange_coefficient(i, &indices).unwrap().to_bytes());
             sum + share.scalar * &lagrange_coefficient(i, &indices).unwrap()
         })
 }

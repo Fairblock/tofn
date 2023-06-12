@@ -170,11 +170,11 @@ pub fn timeout_faulters<K>(
                 faulters.set(from, Fault::MissingMessage)?;
             }
         } else {
-            warn!(
-                    "peer {} says: expected_msg_type not set for peer {} (this peer did not send any messages)",
-                    my_id,
-                    from
-                );
+            // warn!(
+            //         "peer {} says: expected_msg_type not set for peer {} (this peer did not send any messages)",
+            //         my_id,
+            //         from
+            //     );
             faulters.set(from, Fault::MissingMessage)?;
         }
     }
@@ -199,7 +199,7 @@ where
             
          
             if let Some(bytes) = bytes_option {
-                let val = deserialize(&bytes);
+                let val: Option<Bcast> = deserialize(&bytes);
                // debug!("ok");
                 // if {
                 //     debug!("if");

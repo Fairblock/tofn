@@ -40,6 +40,11 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
 
     /// we assume message autenticity
     /// thus, it's a fatal error if `from` is out of bounds
+    
+    pub fn msg_inr4(&mut self, from: TypedUsize<K>, bytes: &[u8]) -> TofnResult<()> {
+        self.bcasts_in.set(from, bytes.to_vec())?;
+        Ok(())
+    }
     pub fn msg_in(&mut self, from: TypedUsize<P>, bytes: &[u8]) -> TofnResult<()> {
         let share_id = self.info().share_info().my_id();
         let party_id = self.info().party_id();
@@ -103,7 +108,7 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
                 *msg_type
             }
             None => {
-               debug!("None : party: {}, type is bcast and p2p {}", self.info().party_id(), matches!(bytes_meta.expected_msg_types, BcastAndP2p));
+            //   debug!("None : party: {}, type is bcast and p2p {}", self.info().party_id(), matches!(bytes_meta.expected_msg_types, BcastAndP2p));
                 self.expected_msg_types
                     .set(bytes_meta.from, bytes_meta.expected_msg_types)?;
                 bytes_meta.expected_msg_types

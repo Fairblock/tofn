@@ -128,6 +128,7 @@ debug!("r1 done");
             threshold,
             party_share_counts,
             dk: party_keygen_data.dec_key.clone(),
+            ek: party_keygen_data.enc_key.clone(),
             u_i_vss,
             // y_i_reveal,
             #[cfg(feature = "malicious")]
