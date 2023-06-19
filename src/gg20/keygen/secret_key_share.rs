@@ -162,6 +162,7 @@ impl<'de> Deserialize<'de> for ShareSecretInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct KeyShareRecoveryInfo {
     x_i_ciphertext: [u8;32],
+    index: usize
 }
 
 impl GroupPublicInfo {
@@ -271,7 +272,7 @@ impl SecretKeyShare {
         debug!("share tofnd: {:?}",self.share.x_i );
         let x : [u8;16]= x_i_ciphertext[..16].try_into().expect("Array size mismatch");
 
-        encode(&KeyShareRecoveryInfo { x_i_ciphertext: *x_i_ciphertext })
+        encode(&KeyShareRecoveryInfo { x_i_ciphertext: *x_i_ciphertext , index: self.share.index.as_usize()})
     }
 
     // /// Recover a `SecretKeyShare`
@@ -281,16 +282,7 @@ impl SecretKeyShare {
     // pub fn recover(
     //     party_keypair: &PartyKeyPair,
     //     recovery_info_bytes: &[u8],
-     
-    //     pubkey_bytes: &[u8],
-    //     party_id: TypedUsize<KeygenPartyId>,
-    //     subshare_id: usize, // in 0..party_share_counts[party_id]
-    //     party_share_counts: KeygenPartyShareCounts,
-    //     threshold: usize,
-    // ) -> TofnResult<Self> {
-    //     let share_count = party_share_counts.total_share_count();
-    //     let share_id = party_share_counts.party_to_share_id(party_id, subshare_id)?;
-
+  
     //     if threshold >= share_count || share_id.as_usize() >= share_count {
     //         error!(
     //             "invalid (share_count,threshold,index): ({},{},{})",

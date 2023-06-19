@@ -477,7 +477,7 @@ pub mod malicious {
     use super::*;
     impl Share {
         pub fn corrupt(&mut self) {
-            *self.scalar.as_mut() += bls12_381::Scalar::one();
+            self.scalar = bls12_381::Scalar::one();
         }
     }
 }

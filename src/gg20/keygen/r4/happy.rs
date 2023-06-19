@@ -207,7 +207,7 @@ if !skip{
         //     .collect();
     //  let s1 =   bls12_381::Scalar::from_bytes(&[249, 227, 197, 161, 108, 61, 118, 222, 202, 91, 141, 110, 154, 164, 62, 134, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).unwrap();
     //    let s2 =  bls12_381::Scalar::from_bytes(&[99, 136, 148, 102, 93, 202, 227, 57, 250, 37, 108, 166, 1, 30, 253, 15, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).unwrap();
-        corrupt!(x_i, self.corrupt_scalar(my_keygen_id, x_i));
+      //  corrupt!(x_i, self.corrupt_scalar(my_keygen_id, x_i));
     //     debug!("xi : {:?}", x_i.to_bytes());
     //     let shares = &[Share{ scalar: s1, index: 0}, Share{scalar:s2,index:1}];
     //     let secret = vss::recover_secret(shares);

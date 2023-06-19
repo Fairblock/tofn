@@ -145,8 +145,6 @@ mod malicious {
         collections::TypedUsize,
         crypto_tools::{
             hash::Output,
-            paillier,
-            paillier::zk::{EncryptionKeyProof, ZkSetupProof},
         },
         gg20::keygen::{malicious::Behaviour, KeygenShareId},
     };
@@ -165,29 +163,7 @@ mod malicious {
         }
     }
 
-    pub fn corrupt_ek_proof(
-        my_keygen_id: TypedUsize<KeygenShareId>,
-        behaviour: &Behaviour,
-        ek_proof: EncryptionKeyProof,
-    ) -> EncryptionKeyProof {
-        if let Behaviour::R1BadEncryptionKeyProof = behaviour {
-            info!("malicious peer {} does {:?}", my_keygen_id, behaviour);
-            paillier::zk::malicious::corrupt_ek_proof(ek_proof)
-        } else {
-            ek_proof
-        }
-    }
 
-    pub fn corrupt_zkp_proof(
-        my_keygen_id: TypedUsize<KeygenShareId>,
-        behaviour: &Behaviour,
-        zkp_proof: ZkSetupProof,
-    ) -> ZkSetupProof {
-        if let Behaviour::R1BadZkSetupProof = behaviour {
-            info!("malicious peer {} does {:?}", my_keygen_id, behaviour);
-            paillier::zk::malicious::corrupt_zksetup_proof(zkp_proof)
-        } else {
-            zkp_proof
-        }
-    }
+
+
 }

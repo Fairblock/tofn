@@ -14,11 +14,11 @@ use crate::{
 use group::ff::PrimeField;
 use rand::{RngCore, CryptoRng};
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{error, debug};
 use zeroize::Zeroize;
 use std::convert::TryInto;
 #[cfg(feature = "malicious")]
-use super::malicious;
+use crate::gg20::keygen::malicious;
 
 /// Maximum byte length of messages exchanged during keygen.
 /// The sender of a message larger than this maximum will be accused as a faulter.
@@ -183,7 +183,14 @@ pub fn new_keygen(
     //     );
     //     return Err(TofnFatal);
     // }
-
+    #[cfg(feature = "malicious")]
+    debug!("{:?}",behaviour);
+    //  #[cfg(feature = "R2BadShare")]
+    // let behaviour= malicious::Behaviour::R2BadShare{victim:TypedUsize::from_usize(1)};
+    // #[cfg(feature = "badShare")]
+    //  let behaviour= malicious::Behaviour::R2BadEncryption{victim:TypedUsize::from_usize(0)};
+    // #[cfg(feature = "badShare")]
+    // let behaviour= malicious::Behaviour::R3FalseAccusation{victim:TypedUsize::from_usize(1)};
     let round2 = r1::start(
         // my_keygen_id,
         threshold,

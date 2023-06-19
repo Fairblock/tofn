@@ -173,22 +173,24 @@ impl Executer for R2 {
             dest_array.copy_from_slice(&binding[..32]);
             let mut u_i_share_ciphertext = Key::encrypt(dest_array,(*share.get_scalar()).to_bytes());
             kij_list.insert(peer_keygen_id.as_usize(),kij);
-            corrupt!(
-                u_i_share_ciphertext,
-                self.corrupt_ciphertext(my_keygen_id, peer_keygen_id, u_i_share_ciphertext)
-            );
+          
             let encShare = GenericArray::as_mut_slice(&mut u_i_share_ciphertext);
             let mut shareB = share.get_scalar().to_bytes();
             let mut plainSecondHalf =  &shareB.as_mut()[16..];
            // debug!("plainSecondHalf : {:?}",plainSecondHalf);
             let c: &[&[u8]] = &[encShare, plainSecondHalf];
             let mut concatC = c.concat();
+            corrupt!(
+                concatC,
+                self.corrupt_ciphertext(my_keygen_id, peer_keygen_id, concatC.clone().try_into().unwrap())
+            );
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////// test wrong share
             // if peer_keygen_id.as_usize() == 0 {
             //     if my_keygen_id.as_usize() == 3{
             //         concatC = [0u8;32].to_vec();
             //     }
             // }
+          
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //debug!("combined_slice : {:?}",concatC);
         //     let kRef = k.as_ref();
@@ -248,14 +250,14 @@ impl Executer for R2 {
 mod malicious {
     use crate::{
         collections::{HoleVecMap, TypedUsize},
-        crypto_tools::{paillier::Ciphertext, vss::Share},
-        gg20::keygen::{malicious::Behaviour, KeygenShareId},
+        crypto_tools::{ vss::Share},
+        gg20::keygen::{ KeygenShareId, malicious::Behaviour},
         sdk::api::TofnResult,
     };
 
     use super::R2;
-
-    use tracing::info;
+    
+    use tracing::{info,debug};
 
     impl R2 {
         pub fn corrupt_share(
@@ -264,8 +266,11 @@ mod malicious {
             mut peer_shares: HoleVecMap<KeygenShareId, Share>,
         ) -> TofnResult<HoleVecMap<KeygenShareId, Share>> {
             if let Behaviour::R2BadShare { victim } = self.behaviour {
+                if my_keygen_id.as_usize() != victim.as_usize(){
                 info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
+
                 peer_shares.get_mut(victim)?.corrupt();
+                debug!("this one is malicious!");}
             }
 
             Ok(peer_shares)
@@ -275,13 +280,14 @@ mod malicious {
             &self,
             my_keygen_id: TypedUsize<KeygenShareId>,
             victim_keygen_id: TypedUsize<KeygenShareId>,
-            mut ciphertext: Ciphertext,
-        ) -> Ciphertext {
+            mut ciphertext: [u8;32],
+        ) -> [u8;32] {
             if let Behaviour::R2BadEncryption { victim } = self.behaviour {
                 if victim == victim_keygen_id {
+                    if victim.as_usize() != my_keygen_id.as_usize(){
                     info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
-                    ciphertext.corrupt();
-                }
+                    ciphertext = [0u8;32];
+                }}
             }
 
             ciphertext

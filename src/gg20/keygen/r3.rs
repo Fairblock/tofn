@@ -356,24 +356,26 @@ impl Executer for R3 {
                    debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
                    vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
                 } else {
-                //     if my_keygen_id.as_usize() == 2{
-                //         if peer_keygen_id.as_usize() == 1{
-                //             debug!("this one!----------------------------------------------------------");
-                //             let commit = bcasts_in
-                //             .get(peer_keygen_id)?
-                //             .u_i_vss_commit.clone();
-                //             let key =  self.r1bcasts
-                //     .get(peer_keygen_id)?
-                //     .ek;
-                // let my_key = self.r1bcasts
-                // .get(my_keygen_id)?
-                // .ek;
-                //             log_accuse_warn(my_keygen_id, peer_keygen_id, "invalid vss share");
-                //             let p = vss::Proof::generate_proof(&bls12_381::G1Projective::generator(),&key,&(self.dk*bls12_381::G1Projective::generator()),self.kij.get(peer_keygen_id.as_usize()).unwrap(),&self.dk).unwrap();
-                //            let cc = serialize(&commit);
-                //            debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
-                //            vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
-                //         }}
+                    #[cfg(feature = "malicious")]
+                    if let Behaviour::R3FalseAccusation { victim } = self.behaviour {
+                    if my_keygen_id.as_usize() == 0{
+                        if peer_keygen_id.as_usize() == victim.as_usize(){
+                            debug!("this one!----------------------------------------------------------");
+                            let commit = bcasts_in
+                            .get(peer_keygen_id)?
+                            .u_i_vss_commit.clone();
+                            let key =  self.r1bcasts
+                    .get(peer_keygen_id)?
+                    .ek;
+                let my_key = self.r1bcasts
+                .get(my_keygen_id)?
+                .ek;
+                            log_accuse_warn(my_keygen_id, peer_keygen_id, "invalid vss share");
+                            let p = vss::Proof::generate_proof(&bls12_381::G1Projective::generator(),&key,&(self.dk*bls12_381::G1Projective::generator()),self.kij.get(peer_keygen_id.as_usize()).unwrap(),&self.dk).unwrap();
+                           let cc = serialize(&commit);
+                           debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
+                           vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
+                        }}}
                     //     if my_keygen_id.as_usize() == 3{
                     //         if peer_keygen_id.as_usize() == 4{
                     //             debug!("this one!----------------------------------------------------------");
@@ -398,10 +400,10 @@ impl Executer for R3 {
             )
         })?;
 
-        corrupt!(
-            vss_complaints,
-            self.corrupt_complaint(my_keygen_id, &share_infos, vss_complaints)?
-        );
+        // corrupt!(
+        //     vss_complaints_vec,
+        //     self.corrupt_complaint(my_keygen_id, &share_infos, vss_complaints_vec.clone())
+        // );
         debug!("r3 done");
 if vss_complaints_vec.len() == 0{
     Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
@@ -466,7 +468,7 @@ if vss_complaints_vec.len() == 0{
 
 #[cfg(feature = "malicious")]
 mod malicious {
-    use super::{ShareInfo, R3};
+    use super::{ShareInfo, R3, ShareInfoDispute};
     use crate::{
         collections::{HoleVecMap, TypedUsize},
         gg20::keygen::KeygenShareId,
@@ -492,19 +494,20 @@ mod malicious {
             &self,
             keygen_id: TypedUsize<KeygenShareId>,
             share_infos: &HoleVecMap<KeygenShareId, ShareInfo>,
-            mut vss_complaints: HoleVecMap<KeygenShareId, Option<ShareInfo>>,
-        ) -> TofnResult<HoleVecMap<KeygenShareId, Option<ShareInfo>>> {
+            mut vss_complaints: Vec<ShareInfoDispute>,
+        ) -> Vec<ShareInfoDispute> {
             if let Behaviour::R3FalseAccusation { victim } = self.behaviour {
-                let complaint = vss_complaints.get_mut(victim)?;
-                if complaint.is_some() {
-                    log_confess_info(keygen_id, &self.behaviour, "but the accusation is true");
-                } else {
-                    log_confess_info(keygen_id, &self.behaviour, "");
-                    *complaint = Some(share_infos.get(victim)?.clone());
+                for dispute in vss_complaints.iter_mut() {
+                    if dispute.faulterId == victim.as_usize(){
+                        dispute.proof = ([0u8;32],[0u8;32],[0u8;32]);
+                  }
+                   // *number *= 2; // Modify the element
+                    //println!("{}", number);
                 }
+             
             }
 
-            Ok(vss_complaints)
+            vss_complaints
         }
     }
 }
