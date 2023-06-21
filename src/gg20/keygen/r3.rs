@@ -358,7 +358,6 @@ impl Executer for R3 {
                 } else {
                     #[cfg(feature = "malicious")]
                     if let Behaviour::R3FalseAccusation { victim } = self.behaviour {
-                    if my_keygen_id.as_usize() == 0{
                         if peer_keygen_id.as_usize() == victim.as_usize(){
                             debug!("this one!----------------------------------------------------------");
                             let commit = bcasts_in
@@ -375,7 +374,7 @@ impl Executer for R3 {
                            let cc = serialize(&commit);
                            debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
                            vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
-                        }}}
+                        }}
                     //     if my_keygen_id.as_usize() == 3{
                     //         if peer_keygen_id.as_usize() == 4{
                     //             debug!("this one!----------------------------------------------------------");
@@ -497,6 +496,7 @@ mod malicious {
             mut vss_complaints: Vec<ShareInfoDispute>,
         ) -> Vec<ShareInfoDispute> {
             if let Behaviour::R3FalseAccusation { victim } = self.behaviour {
+               
                 for dispute in vss_complaints.iter_mut() {
                     if dispute.faulterId == victim.as_usize(){
                         dispute.proof = ([0u8;32],[0u8;32],[0u8;32]);
