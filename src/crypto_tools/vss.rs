@@ -1,26 +1,22 @@
 //! Helpers for verifiable secret sharing
-use crate::{
-   
-    sdk::api::{TofnFatal, TofnResult}, crypto_tools::hash,
-    
-};
-use serde::{Serialize, Serializer, ser::SerializeStruct,ser::SerializeSeq, Deserializer};
+use crate::sdk::api::{TofnFatal, TofnResult};
+use bincode::config::BigEndian;
 use core::panic;
-use std::{convert::TryInto, fmt, result};
-use group::{GroupEncoding, ff::PrimeField};
-use bincode::{config::BigEndian};
-use rand::Rng;
+use group::{ff::PrimeField, GroupEncoding};
 use num_bigint::BigUint;
-use num_traits::{Num, ToPrimitive, FromPrimitive};
+use num_traits::{FromPrimitive, Num, ToPrimitive};
+use rand::Rng;
+use serde::{ser::SerializeSeq, ser::SerializeStruct, Deserializer, Serialize, Serializer};
+use std::{convert::TryInto, fmt, result};
 //use k256::elliptic_curve::Field;
-use serde::{Deserialize};
-use tracing::{error, debug};
-use zeroize::Zeroize;
 use rand::RngCore;
+use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use tracing::{debug, error};
+use zeroize::Zeroize;
 // use num_bigint::{BigUint, ToBigUint};
 // use kyber::{Scalar, GroupElement};
-use bls12_381::{G1Projective, Scalar as BlsScalar, G1Affine};
+use bls12_381::{G1Affine, G1Projective, Scalar as BlsScalar};
 use std::error::Error;
 
 use group::Curve;
@@ -32,7 +28,6 @@ pub struct Vss {
 
 impl Vss {
     pub fn new(threshold: usize) -> Self {
-        
         let secret_coeffs: Vec<bls12_381::Scalar> = (0..=threshold)
             .map(|_| bls12_381::Scalar::from_u128(rand::thread_rng().gen::<u128>()))
             .collect();
@@ -84,10 +79,8 @@ impl Vss {
 #[derive(Clone, Debug)]
 
 pub struct Commit {
-   
     coeff_commits: Vec<bls12_381::G1Projective>,
 }
-
 
 impl Serialize for Commit {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -103,25 +96,6 @@ impl Serialize for Commit {
         seq.end()
     }
 }
-
-// impl<'de> Deserialize<'de> for Commit {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: Deserializer<'de>,
-//     {
-      
-
-//         let helper: Vec<[u8;32]> = Deserialize::deserialize(deserializer)?;
-      
-//         let coeff_commits_point: Vec<G1Projective> = 
-//         helper.into_iter()
-//         .map(|my_array| G1Affine::from_compressed(&my_array).unwrap().into())
-//         .collect();
-//         Ok(Commit { coeff_commits:coeff_commits_point })
-//     }
-// }
-
-
 
 struct MyStruct<'a> {
     bytes: Vec<&'a [u8]>,
@@ -176,52 +150,21 @@ impl<'de> Deserialize<'de> for Commit {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
-    
     {
-   
-
         let fields = MyStruct::deserialize(deserializer)?;
         let coeff_commits = fields
             .bytes
             .into_iter()
-            .map(|bytes| G1Affine::from_compressed(bytes.try_into().unwrap()).unwrap().into())
+            .map(|bytes| {
+                G1Affine::from_compressed(bytes.try_into().unwrap())
+                    .unwrap()
+                    .into()
+            })
             .collect();
 
         Ok(Commit { coeff_commits })
     }
 }
-
-// impl<'de> Deserialize<'de> for Commit {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//         struct CommitVisitor;
-
-//         impl<'de> serde::de::Visitor<'de> for CommitVisitor {
-//             type Value = Commit;
-
-//             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-//                 formatter.write_str("struct Commit")
-//             }
-
-//             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-//             where
-//                 A: serde::de::SeqAccess<'de>,
-//             {
-//                 let mut coeff_commits = Vec::new();
-//                 while let Some(bytes) = seq.next_element().unwrap(){
-//                     let point = G1Affine::from_compressed(&bytes).unwrap();
-//                     coeff_commits.push(point.into());
-//                 }
-//                 Ok(Commit { coeff_commits })
-//             }
-//         }
-
-//         deserializer.deserialize_seq(CommitVisitor)
-//     }
-// }
-
 
 impl Commit {
     pub fn len(&self) -> usize {
@@ -276,11 +219,13 @@ impl<'de> Deserialize<'de> for Share {
     where
         D: Deserializer<'de>,
     {
-        
-        let (c, r) = <([u8;32], usize)>::deserialize(deserializer)?;
+        let (c, r) = <([u8; 32], usize)>::deserialize(deserializer)?;
         let shareScalar = bls12_381::Scalar::from_bytes(&c).unwrap();
-    
-        Ok(Share { scalar:shareScalar, index: r })
+
+        Ok(Share {
+            scalar: shareScalar,
+            index: r,
+        })
     }
 }
 impl Serialize for Share {
@@ -296,110 +241,97 @@ impl Serialize for Share {
     }
 }
 
-pub struct EncKey{
-    kij: bls12_381::Scalar
+pub struct EncKey {
+    kij: bls12_381::Scalar,
 }
 #[derive(Debug, Clone)]
-pub struct  Proof {
-    c:bls12_381::Scalar,
-    r:bls12_381::Scalar
+pub struct Proof {
+    c: bls12_381::Scalar,
+    r: bls12_381::Scalar,
 }
-
 
 impl<'de> Deserialize<'de> for Proof {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        
-        let (c, r) = <([u8;32], [u8;32])>::deserialize(deserializer)?;
+        let (c, r) = <([u8; 32], [u8; 32])>::deserialize(deserializer)?;
         let cScalar = bls12_381::Scalar::from_bytes(&c).unwrap();
         let rScalar = bls12_381::Scalar::from_bytes(&r).unwrap();
-        Ok(Proof { c:cScalar, r:rScalar })
+        Ok(Proof {
+            c: cScalar,
+            r: rScalar,
+        })
     }
 }
 
+impl Proof {
+    pub fn generate_proof(
+        point_g: &bls12_381::G1Projective,
+        public_key_i: &bls12_381::G1Projective,
+        public_key_j: &bls12_381::G1Projective,
+        encryption_key_ij: &bls12_381::G1Projective,
+        secret_key_j: &BlsScalar,
+    ) -> Result<([u8; 32], [u8; 32], [u8; 32]), Box<dyn Error>> {
+        let one = BigUint::from_i32(1).unwrap();
+        let order = "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001";
 
-impl Proof{
+        let group_order = BigUint::parse_bytes(order.as_bytes(), 16).unwrap();
 
+        let max = group_order - &one;
 
-pub fn generate_proof( point_g: &bls12_381::G1Projective, public_key_i: &bls12_381::G1Projective, public_key_j: &bls12_381::G1Projective, encryption_key_ij: &bls12_381::G1Projective, secret_key_j: &BlsScalar) -> Result<([u8; 32], [u8;32], [u8;32]), Box<dyn Error>> {
-    let one = BigUint::from_i32(1).unwrap();
-    let order = "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001";
+        let mut rng = rand::thread_rng();
+        let mut w: u64 = rng.gen();
 
+        w = w + 1;
 
+        let mut omega = bls12_381::Scalar::from(w);
 
-    let group_order = BigUint::parse_bytes(order.as_bytes(), 16).unwrap();
+        let mut t1 = bls12_381::G1Projective::generator();
+        let mut t2 = bls12_381::G1Projective::generator();
 
+        t1 = t1 * omega;
 
-    let max = group_order - &one;
-    
-    let mut rng = rand::thread_rng();
-    // let mut w_bytes = vec![0u8];
-    // rng.fill_bytes(&mut w_bytes[..]);
-    // let text_as_string = core::str::from_utf8(&w_bytes).map_err(|_| "not a string")?;
-    // let mut w: u64 = text_as_string.parse().map_err(|_| "not a number")?;
-    let mut w: u64 = rng.gen();
-    // let mut w = (&w_bytes) as ;
-    w = w + 1;
+        t2 = public_key_i * omega;
 
-    let mut omega = bls12_381::Scalar::from(w);
-    
+        let concat = format!(
+            "{:?}{:?}{:?}{:?}{:?}{:?}",
+            (*point_g).to_bytes(),
+            public_key_j.to_bytes(),
+            public_key_i.to_bytes(),
+            encryption_key_ij.to_bytes(),
+            t1.to_bytes(),
+            t2.to_bytes()
+        );
+        
+        let mut hasher = Sha256::new();
+        hasher.update(concat.as_bytes());
+        let c = hasher.finalize();
+        
+        let mut hash_bytes: [u8; 32] = [0u8; 32];
+        let mut result: [u8; 32] = [0u8; 32];
+        hash_bytes.copy_from_slice(&c.as_ref());
+        let mut hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&hash_bytes);
+        while hash2_kyber_scalar.is_some().unwrap_u8() == 0 {
+           
+            let gorder = order.as_bytes();
+            for i in 0..32 {
+                result[i] = hash_bytes[i].wrapping_sub(gorder[i]);
+            }
+            hash_bytes = result;
+            hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&result);
+        }
+        let u = &hash2_kyber_scalar.unwrap();
 
-    let mut t1 = bls12_381::G1Projective::generator();
-    let mut t2 = bls12_381::G1Projective::generator();
+        let s = secret_key_j;
 
-    t1 = t1 * omega;
- 
- 
-    t2 =  public_key_i * omega;
-   
-    let concat = format!("{:?}{:?}{:?}{:?}{:?}{:?}", (*point_g).to_bytes(), public_key_j.to_bytes(), public_key_i.to_bytes(), encryption_key_ij.to_bytes(), t1.to_bytes(), t2.to_bytes());
-    debug!("concat:{}",concat);
-    let mut hasher = Sha256::new();
-    hasher.update(concat.as_bytes());
-    let c = hasher.finalize();
-    debug!("c : {:?}", c);
-    let mut hash_bytes: [u8; 32] = [0u8; 32];
-    let mut result: [u8; 32] = [0u8; 32];
-    hash_bytes.copy_from_slice(&c.as_ref());
-    //debug!("{:?}",hash_bytes);
- 
-//let hash2_kyber_scalar = Scalar::from_bytes(&hash_bytes);
-    let mut hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&hash_bytes);
-    while hash2_kyber_scalar.is_some().unwrap_u8() == 0{
-        debug!("here");
-    let gorder= order.as_bytes();
-    for i in 0..32 {
-        result[i] = hash_bytes[i].wrapping_sub(gorder[i]);
+        let binding = s * u;
+
+        let b = binding.neg();
+        let r = b + omega;
+
+        Ok(((*u).to_bytes(), r.to_bytes(), c.into()))
     }
-    hash_bytes = result;
-    hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&result);
-}
-   let u = &hash2_kyber_scalar.unwrap();
-  //  debug!("okkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
-    let s = secret_key_j;
- //   debug!("hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
-    let binding = s * u;
-   
-    // r = &(r * &hash2_kyber_scalar.unwrap());
-    let b = binding.neg();
-    let r = b + omega;
-   // r = &binding;
-    let pkrec = public_key_j * u;
-    let tp = point_g * r;
-    //let tpp = bls12_381::G1Projective::Mul::mul(r, point_g) //+ 
-   // debug!("t1prime : {:?}",tp.to_bytes());  
-//     debug!("t1:{:?}", t1.to_bytes());
-//     debug!("t2:{:?}", t2.to_bytes());
-// // debug!("x1t :{:?}", tp.to_bytes());
-// // debug!("y1t:{:?}",pkrec.to_bytes());
-//    debug!("r: {:?}", r.to_bytes());
-  // debug!("c: {:?}", (*u).to_bytes());
-   // debug!("g:{:?} - pkj:{:?} - pki:{:?} - ek:{:?} - c:{:?} - r:{:?}", point_g.to_bytes(),public_key_j.to_bytes(),public_key_i.to_bytes(), encryption_key_ij.to_bytes(), u.to_bytes(),r.to_bytes());
-    Ok(((*u).to_bytes(), r.to_bytes(), c.into()))
-}
-
 }
 impl Share {
     pub fn from_scalar(scalar: bls12_381::Scalar, index: usize) -> Self {
@@ -439,9 +371,7 @@ pub fn recover_secret_commit(
     let indices: Vec<usize> = share_commits.iter().map(|s| s.index).collect();
     share_commits.iter().enumerate().try_fold(
         bls12_381::G1Projective::identity(),
-        |sum, (i, share_commit)| {
-            Ok(sum + share_commit.point * &lagrange_coefficient(i, &indices)?)
-        },
+        |sum, (i, share_commit)| Ok(sum + share_commit.point * &lagrange_coefficient(i, &indices)?),
     )
 }
 
@@ -488,7 +418,7 @@ pub fn recover_secret(shares: &[Share]) -> bls12_381::Scalar {
         .iter()
         .enumerate()
         .fold(bls12_381::Scalar::zero(), |sum, (i, share)| {
-          //  debug!("coeff {:?}",lagrange_coefficient(i, &indices).unwrap().to_bytes());
+            
             sum + share.scalar * &lagrange_coefficient(i, &indices).unwrap()
         })
 }
@@ -591,7 +521,9 @@ mod tests {
 
         let recovered_secret = additive_shares
             .iter()
-            .fold(bls12_381::Scalar::zero(), |acc, share| acc + share.get_scalar());
+            .fold(bls12_381::Scalar::zero(), |acc, share| {
+                acc + share.get_scalar()
+            });
         assert_eq!(recovered_secret, *vss.get_secret());
     }
 }

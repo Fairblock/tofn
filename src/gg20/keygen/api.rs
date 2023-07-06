@@ -1,10 +1,12 @@
-use super::{r1::{self}, r3};
+use super::{
+    r1::{self},
+    r3,
+};
+#[cfg(feature = "malicious")]
+use crate::gg20::keygen::malicious;
 use crate::{
     collections::{TypedUsize, VecMap},
-    crypto_tools::{
-     
-        rng, enc::Key,
-    },
+    crypto_tools::{enc::Key, rng},
     gg20::constants::{KEYPAIR_TAG, ZKSETUP_TAG},
     sdk::{
         api::{PartyShareCounts, Protocol, TofnFatal, TofnResult},
@@ -12,13 +14,11 @@ use crate::{
     },
 };
 use group::ff::PrimeField;
-use rand::{RngCore, CryptoRng};
+use rand::{CryptoRng, RngCore};
 use serde::{Deserialize, Serialize};
-use tracing::{error, debug};
-use zeroize::Zeroize;
 use std::convert::TryInto;
-#[cfg(feature = "malicious")]
-use crate::gg20::keygen::malicious;
+use tracing::{debug, error};
+use zeroize::Zeroize;
 
 /// Maximum byte length of messages exchanged during keygen.
 /// The sender of a message larger than this maximum will be accused as a faulter.
@@ -46,55 +46,13 @@ pub type Disputes = r3::P2pSad;
 
 pub struct PartyKeyPair {
     pub(super) enc_key: bls12_381::G1Projective,
-    pub(super) dec_key: bls12_381::Scalar
-  
+    pub(super) dec_key: bls12_381::Scalar,
 }
 
 #[derive(Debug, Clone)]
 pub struct PartyKeygenData {
     pub encryption_keypair: PartyKeyPair,
-    // pub(super) encryption_keypair_proof: EncryptionKeyProof,
-    // pub(super) zk_setup: ZkSetup,
-    // pub(super) zk_setup_proof: ZkSetupProof,
 }
-
-// // Since safe prime generation is expensive, a party is expected to generate
-// // a keypair once for all it's shares and provide it to new_keygen
-// pub fn create_party_keypair_and_zksetup(
-//     my_party_id: TypedUsize<KeygenPartyId>,
-//     secret_recovery_key: &SecretRecoveryKey,
-//     session_nonce: &[u8],
-// ) -> TofnResult<PartyKeygenData> {
-//     let encryption_keypair =
-//         recover_party_keypair(my_party_id, secret_recovery_key, session_nonce)?;
-
-//     let encryption_keypair_proof = encryption_keypair
-//         .ek
-//         .correctness_proof(&encryption_keypair.dk, &my_party_id.to_bytes());
-
-//     let mut zksetup_rng =
-//         rng::rng_seed(ZKSETUP_TAG, my_party_id, secret_recovery_key, session_nonce)?;
-//     let (zk_setup, zk_setup_proof) = ZkSetup::new(&mut zksetup_rng, &my_party_id.to_bytes())?;
-
-//     Ok(PartyKeygenData {
-//         encryption_keypair,
-//         encryption_keypair_proof,
-//         zk_setup,
-//         zk_setup_proof,
-//     })
-// }
-
-// pub fn recover_party_keypair(
-//     my_party_id: TypedUsize<KeygenPartyId>,
-//     secret_recovery_key: &SecretRecoveryKey,
-//     session_nonce: &[u8],
-// ) -> TofnResult<PartyKeyPair> {
-//     let mut rng = rng::rng_seed(KEYPAIR_TAG, my_party_id, secret_recovery_key, session_nonce)?;
-
-//     let (ek, dk) = paillier::keygen(&mut rng)?;
-
-//     Ok(PartyKeyPair { ek, dk })
-// }
 
 // // BEWARE: This is only made visible for faster integration testing
 pub fn create_party_keypair_and_zksetup_unsafe(
@@ -105,11 +63,7 @@ pub fn create_party_keypair_and_zksetup_unsafe(
     let encryption_keypair =
         recover_party_keypair_unsafe(my_party_id, secret_recovery_key, session_nonce)?;
 
-
-    Ok(PartyKeygenData {
-        encryption_keypair,
-       
-    })
+    Ok(PartyKeygenData { encryption_keypair })
 }
 
 // // BEWARE: This is only made visible for faster integration testing
@@ -122,16 +76,19 @@ pub fn recover_party_keypair_unsafe(
 
     let (ek, dk) = keygen_unsafe(&mut rng);
 
-    Ok(PartyKeyPair { enc_key: ek, dec_key: dk })
+    Ok(PartyKeyPair {
+        enc_key: ek,
+        dec_key: dk,
+    })
 }
-pub fn keygen_unsafe(rng: &mut (impl CryptoRng + RngCore),) -> (bls12_381::G1Projective,bls12_381::Scalar){
-  
-    
+pub fn keygen_unsafe(
+    rng: &mut (impl CryptoRng + RngCore),
+) -> (bls12_381::G1Projective, bls12_381::Scalar) {
     let u = rng.next_u64();
-    
+
     let dk = bls12_381::Scalar::from_u128(u as u128);
     let ek = dk * bls12_381::G1Projective::generator();
-    return (ek,dk);
+    return (ek, dk);
 }
 
 // Can't define a keygen-specific alias for `RoundExecuter` that sets
@@ -158,41 +115,17 @@ pub fn new_keygen(
 ) -> TofnResult<KeygenProtocol> {
     // validate args
     let v = vec![1; party_share_count];
-    let party_share_counts = KeygenPartyShareCounts{ party_share_counts: VecMap::from_vec(v), total_share_count: party_share_count};
-    // if party_share_counts
-    //     .iter()
-    //     .any(|(_, &c)| c > MAX_PARTY_SHARE_COUNT)
-    // {
-    //     error!(
-    //         "detected a party with share count exceeding {}",
-    //         MAX_PARTY_SHARE_COUNT
-    //     );
-    //     return Err(TofnFatal);
-    // }
-    //let total_share_count: usize = party_share_counts.total_share_count();
-     let my_keygen_id = party_share_counts.party_to_share_id(my_party_id, my_party_id.as_usize())?;
+    let party_share_counts = KeygenPartyShareCounts {
+        party_share_counts: VecMap::from_vec(v),
+        total_share_count: party_share_count,
+    };
 
-    // #[allow(clippy::suspicious_operation_groupings)]
-    // if total_share_count <= threshold
-    //     || total_share_count > MAX_TOTAL_SHARE_COUNT
-    //     || my_party_id.as_usize() >= party_share_counts.party_count()
-    // {
-    //     error!(
-    //         "invalid (total_share_count, threshold, my_party_id, my_subshare_id, max_share_count): ({},{},{},{},{})",
-    //         total_share_count, threshold, my_party_id, my_subshare_id, MAX_TOTAL_SHARE_COUNT
-    //     );
-    //     return Err(TofnFatal);
-    // }
+    let my_keygen_id = party_share_counts.party_to_share_id(my_party_id, my_party_id.as_usize())?;
+
     #[cfg(feature = "malicious")]
-    debug!("{:?}",behaviour);
-    //  #[cfg(feature = "R2BadShare")]
-    // let behaviour= malicious::Behaviour::R2BadShare{victim:TypedUsize::from_usize(1)};
-    // #[cfg(feature = "badShare")]
-    //  let behaviour= malicious::Behaviour::R2BadEncryption{victim:TypedUsize::from_usize(0)};
-    // #[cfg(feature = "badShare")]
-    // let behaviour= malicious::Behaviour::R3FalseAccusation{victim:TypedUsize::from_usize(1)};
+    debug!("{:?}", behaviour);
+
     let round2 = r1::start(
-        // my_keygen_id,
         threshold,
         party_share_counts.clone(),
         party_keygen_data,
