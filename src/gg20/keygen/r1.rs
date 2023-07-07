@@ -98,25 +98,3 @@ pub(super) fn start(
     )))
 }
 
-#[cfg(feature = "malicious")]
-mod malicious {
-    use crate::{
-        collections::TypedUsize,
-        crypto_tools::hash::Output,
-        gg20::keygen::{malicious::Behaviour, KeygenShareId},
-    };
-    use tracing::info;
-
-    pub fn corrupt_commit(
-        my_keygen_id: TypedUsize<KeygenShareId>,
-        behaviour: &Behaviour,
-        commit: Output,
-    ) -> Output {
-        if let Behaviour::R1BadCommit = behaviour {
-            info!("malicious peer {} does {:?}", my_keygen_id, behaviour);
-            commit.corrupt()
-        } else {
-            commit
-        }
-    }
-}

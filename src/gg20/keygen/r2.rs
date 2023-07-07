@@ -238,8 +238,9 @@ mod malicious {
             my_keygen_id: TypedUsize<KeygenShareId>,
             mut peer_shares: HoleVecMap<KeygenShareId, Share>,
         ) -> TofnResult<HoleVecMap<KeygenShareId, Share>> {
-            if let Behaviour::R2BadShare { victim } = self.behaviour {
-                if my_keygen_id.as_usize() != victim.as_usize() {
+            if let Behaviour::R2BadShare { victim, faulty } = self.behaviour {
+                if my_keygen_id.as_usize() == faulty.as_usize() {
+
                     info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
 
                     peer_shares.get_mut(victim)?.corrupt();

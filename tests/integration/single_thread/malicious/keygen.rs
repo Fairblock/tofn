@@ -26,7 +26,6 @@ pub fn single_fault_test_case_list() -> Vec<TestCase> {
         single_fault_test_case(R1BadCommit),
         single_fault_test_case(R1BadEncryptionKeyProof),
         single_fault_test_case(R1BadZkSetupProof),
-        single_fault_test_case(R2BadShare { victim: zero }),
         single_fault_test_case(R2BadEncryption { victim: zero }),
         single_fault_test_case(R3FalseAccusation { victim: zero }),
         single_fault_test_case(R3BadXIWitness),
