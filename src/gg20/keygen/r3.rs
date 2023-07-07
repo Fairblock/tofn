@@ -1,22 +1,22 @@
 use bls12_381::G1Affine;
-use rand::seq::index;
+
 use serde::{Deserialize, Serialize, Serializer, ser::SerializeStruct, Deserializer};
 //use tracing::warn;
 //se tracing_subscriber::field::debug;
 use tracing::{warn, debug};
 use crate::{
     collections::{FillVecMap, P2ps, VecMap},
-    crypto_tools::{constants, vss::{self, Proof, Commit}, enc::Key},
+    crypto_tools::{vss::{self, Proof, Commit}, enc::Key},
     gg20::keygen::{r4, SecretKeyShare},
     sdk::{
-        api::{Fault::{ProtocolFault, self}, TofnFatal, TofnResult},
+        api::{Fault::{ProtocolFault, self}, TofnResult},
         implementer_api::{
             log_accuse_warn, serialize, Executer, ProtocolBuilder, ProtocolInfo, RoundBuilder,
         },
     },
 };
 use vec_map::VecMap as DVecMap;
-use std::{convert::TryInto, fmt};
+use std::{convert::TryInto};
 use crate::crypto_tools::enc::EncDec;
 use super::{r1, r2, KeygenPartyShareCounts, KeygenShareId};
 use group::GroupEncoding;
@@ -209,7 +209,7 @@ impl Executer for R3 {
         // validate shares
         
         let mut vss_complaints_vec: Vec<ShareInfoDispute> = Vec::new();
-        let vss_complaints = share_infos.ref_map2_result(|(peer_keygen_id, share_info)| {
+        let _vss_complaints = share_infos.ref_map2_result(|(peer_keygen_id, share_info)| {
         
        
             Ok(

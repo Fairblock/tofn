@@ -6,19 +6,19 @@ use super::{
 use crate::gg20::keygen::malicious;
 use crate::{
     collections::{TypedUsize, VecMap},
-    crypto_tools::{enc::Key, rng},
-    gg20::constants::{KEYPAIR_TAG, ZKSETUP_TAG},
+    crypto_tools::{rng},
+    gg20::constants::{KEYPAIR_TAG},
     sdk::{
-        api::{PartyShareCounts, Protocol, TofnFatal, TofnResult},
+        api::{PartyShareCounts, Protocol, TofnResult},
         implementer_api::{new_protocol, ProtocolBuilder},
     },
 };
 use group::ff::PrimeField;
 use rand::{CryptoRng, RngCore};
 use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
-use tracing::{debug, error};
-use zeroize::Zeroize;
+
+
+
 
 /// Maximum byte length of messages exchanged during keygen.
 /// The sender of a message larger than this maximum will be accused as a faulter.
@@ -122,8 +122,7 @@ pub fn new_keygen(
 
     let my_keygen_id = party_share_counts.party_to_share_id(my_party_id, my_party_id.as_usize())?;
 
-    #[cfg(feature = "malicious")]
-    debug!("{:?}", behaviour);
+   
 
     let round2 = r1::start(
         threshold,

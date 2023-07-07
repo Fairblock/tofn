@@ -1,5 +1,5 @@
 use serde::de::DeserializeOwned;
-use tracing::{warn, debug};
+use tracing::{warn};
 
 use crate::{
     collections::{FillP2ps, FillVecMap, P2ps, TypedUsize},
@@ -184,9 +184,9 @@ pub fn timeout_faulters<K>(
 /// Attempt to deserialize bcasts.
 /// Set `faulters` appropriately.
 pub fn deserialize_bcasts<K, Bcast>(
-    my_id: TypedUsize<K>,
+    _my_id: TypedUsize<K>,
     bcasts_in: FillVecMap<K, BytesVec>,
-    faulters: &mut FillVecMap<K, Fault>,
+    _faulters: &mut FillVecMap<K, Fault>,
 ) -> TofnResult<FillVecMap<K, Bcast>>
 where
     Bcast: DeserializeOwned,
@@ -194,7 +194,7 @@ where
     
     bcasts_in
         .into_iter()
-        .map(|(from, bytes_option)| {
+        .map(|(_from, bytes_option)| {
             //debug!("{:?}", bytes_option);
             
          
@@ -203,7 +203,7 @@ where
                // debug!("ok");
                 // if {
                 //     debug!("if");
-                  Ok((val))
+                  Ok(val)
                 // } else {
                 //     // warn!(
                 //     //     "peer {} says: detected corrupted bcast from peer {}",

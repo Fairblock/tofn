@@ -1,6 +1,5 @@
 use crate::{
-    collections::TypedUsize,
-    crypto_tools::{constants, enc::Key, vss},
+    crypto_tools::{vss},
     sdk::{
         api::TofnResult,
         implementer_api::{serialize, ProtocolBuilder, RoundBuilder},
@@ -8,7 +7,7 @@ use crate::{
 };
 
 use super::{
-    r2, KeygenPartyShareCounts, KeygenProtocolBuilder, KeygenShareId, PartyKeyPair, PartyKeygenData,
+    r2, KeygenPartyShareCounts, KeygenProtocolBuilder, PartyKeyPair,
 };
 use group::GroupEncoding;
 use serde::Deserializer;

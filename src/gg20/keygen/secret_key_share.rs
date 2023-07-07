@@ -1,21 +1,21 @@
-use std::{convert::TryInto, error::Error};
+use std::{convert::TryInto};
 
-use super::{KeygenPartyId, KeygenPartyShareCounts, KeygenShareId, PartyKeyPair};
+use super::{KeygenPartyShareCounts, KeygenShareId};
 use crate::{
-    collections::{TypedUsize, VecMap},
-    crypto_tools::{enc::Key, vss},
+    collections::{TypedUsize},
+    crypto_tools::{enc::Key},
     sdk::{
-        api::{BytesVec, TofnFatal, TofnResult},
-        implementer_api::{decode, encode},
+        api::{BytesVec, TofnResult},
+        implementer_api::{encode},
     },
 };
-use ark_serialize::CanonicalSerialize;
-use bls12_381::{G1Affine, G1Projective, Scalar};
+
+use bls12_381::{G1Affine, Scalar};
 use group::{Curve, GroupEncoding};
-use k256::ProjectivePoint;
+
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
-use tracing::{debug, error};
-use zeroize::Zeroize;
+use tracing::{debug};
+
 
 /// final output of keygen: store this struct in tofnd kvstore
 #[derive(Debug, Clone, PartialEq)]
@@ -247,12 +247,12 @@ impl SecretKeyShare {
     }
 
     pub fn recovery_info(&self) -> TofnResult<BytesVec> {
-        let index = self.share.index;
-        let share = self.share.clone();
+        let _index = self.share.index;
+        let _share = self.share.clone();
         let x_i_ciphertext = &self.share.x_i.to_bytes();
 
         debug!("share tofnd: {:?}", self.share.x_i);
-        let x: [u8; 16] = x_i_ciphertext[..16]
+        let _x: [u8; 16] = x_i_ciphertext[..16]
             .try_into()
             .expect("Array size mismatch");
 

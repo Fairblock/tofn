@@ -4,7 +4,7 @@ use tofn::{
     collections::{HoleVecMap, TypedUsize, VecMap},
     sdk::api::{BytesVec, Protocol, TofnResult},
 };
-use tracing::{debug, warn, field::debug};
+use tracing::{debug, warn};
 
 pub fn execute_protocol<F, K, P, const MAX_MSG_IN_LEN: usize>(
     mut parties: VecMap<K, Protocol<F, K, P, MAX_MSG_IN_LEN>>,

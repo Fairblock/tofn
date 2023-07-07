@@ -1,6 +1,6 @@
 use crate::{collections::TypedUsize, sdk::api::TofnFatal};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use tracing::{error, warn, debug};
+use tracing::{error, warn};
 
 use super::api::{BytesVec, TofnResult};
 use bincode::{

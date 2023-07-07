@@ -1,25 +1,25 @@
 //! Helpers for verifiable secret sharing
 use crate::sdk::api::{TofnFatal, TofnResult};
-use bincode::config::BigEndian;
-use core::panic;
+
+
 use group::{ff::PrimeField, GroupEncoding};
 use num_bigint::BigUint;
-use num_traits::{FromPrimitive, Num, ToPrimitive};
+use num_traits::{FromPrimitive};
 use rand::Rng;
 use serde::{ser::SerializeSeq, ser::SerializeStruct, Deserializer, Serialize, Serializer};
-use std::{convert::TryInto, fmt, result};
+use std::{convert::TryInto};
 //use k256::elliptic_curve::Field;
-use rand::RngCore;
+
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use tracing::{debug, error};
-use zeroize::Zeroize;
+use tracing::{error};
+
 // use num_bigint::{BigUint, ToBigUint};
 // use kyber::{Scalar, GroupElement};
-use bls12_381::{G1Affine, G1Projective, Scalar as BlsScalar};
+use bls12_381::{G1Affine, Scalar as BlsScalar};
 use std::error::Error;
 
-use group::Curve;
+
 #[derive(Debug)]
 
 pub struct Vss {
@@ -278,14 +278,14 @@ impl Proof {
 
         let group_order = BigUint::parse_bytes(order.as_bytes(), 16).unwrap();
 
-        let max = group_order - &one;
+        let _max = group_order - &one;
 
         let mut rng = rand::thread_rng();
         let mut w: u64 = rng.gen();
 
         w = w + 1;
 
-        let mut omega = bls12_381::Scalar::from(w);
+        let omega = bls12_381::Scalar::from(w);
 
         let mut t1 = bls12_381::G1Projective::generator();
         let mut t2 = bls12_381::G1Projective::generator();

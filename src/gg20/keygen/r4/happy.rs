@@ -1,30 +1,30 @@
-use aes::cipher::generic_array::GenericArray;
-use group::ff::PrimeField;
-use tracing::{debug, warn};
+
+
+use tracing::{debug};
 
 use crate::crypto_tools::enc::EncDec;
 use crate::{
-    collections::{zip2, FillVecMap, FullP2ps, P2ps, VecMap},
+    collections::{FillVecMap, FullP2ps, P2ps, VecMap},
     crypto_tools::{
         enc::Key,
-        vss::{self, Share},
+        vss::{self},
     },
     gg20::keygen::{
         r1, r2,
-        r3::{self, ShareInfo},
-        GroupPublicInfo, KeygenPartyShareCounts, KeygenShareId, SecretKeyShare, SharePublicInfo,
+        r3::{ShareInfo},
+        GroupPublicInfo, KeygenPartyShareCounts, KeygenShareId, SecretKeyShare,
         ShareSecretInfo,
     },
     sdk::{
         api::{
-            Fault::{self, ProtocolFault},
+            Fault::{self},
             TofnResult,
         },
-        implementer_api::{log_fault_warn, Executer, ProtocolBuilder, ProtocolInfo},
+        implementer_api::{Executer, ProtocolBuilder, ProtocolInfo},
     },
 };
 use group::GroupEncoding;
-use std::{convert::TryInto, string};
+use std::{convert::TryInto};
 use vec_map::VecMap as DVecMap;
 #[allow(non_snake_case)]
 pub(in super::super) struct R4Happy {
@@ -57,7 +57,7 @@ impl Executer for R4Happy {
         self: Box<Self>,
         info: &ProtocolInfo<Self::Index>,
         bcasts_in: FillVecMap<Self::Index, Self::Bcast>,
-        p2ps_in: P2ps<Self::Index, Self::P2p>,
+        _p2ps_in: P2ps<Self::Index, Self::P2p>,
     ) -> TofnResult<ProtocolBuilder<Self::FinalOutput, Self::Index>> {
         debug!("r4 start");
 

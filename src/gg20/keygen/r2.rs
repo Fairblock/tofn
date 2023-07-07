@@ -18,9 +18,9 @@ use crate::{
         implementer_api::{serialize, Executer, ProtocolBuilder, ProtocolInfo, RoundBuilder},
     },
 };
-use aes::cipher::typenum::bit::{B0, B1};
+
 use aes::cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit};
-use aes::cipher::{typenum, ArrayLength, Block, BlockSizeUser};
+use aes::cipher::{typenum};
 use aes::Aes256;
 use group::GroupEncoding;
 use sha2::{Digest, Sha256};
@@ -168,10 +168,10 @@ impl Executer for R2 {
 
             let encShare = GenericArray::as_mut_slice(&mut u_i_share_ciphertext);
             let mut shareB = share.get_scalar().to_bytes();
-            let mut plainSecondHalf = &shareB.as_mut()[16..];
+            let plainSecondHalf = &shareB.as_mut()[16..];
            
             let c: &[&[u8]] = &[encShare, plainSecondHalf];
-            let mut concatC = c.concat();
+            let concatC = c.concat();
             corrupt!(
                 concatC,
                 self.corrupt_ciphertext(

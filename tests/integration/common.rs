@@ -3,14 +3,7 @@ use std::convert::TryInto;
 use tofn::{collections::{TypedUsize, VecMap}, gg20::keygen::{SecretRecoveryKey, KeygenPartyId, KeygenProtocol, KeygenShareId, create_party_keypair_and_zksetup_unsafe, new_keygen}, sdk::api::PartyShareCounts};
 
 pub mod keygen {
-    use tofn::{
-        collections::VecMap,
-        gg20::keygen::{
-            create_party_keypair_and_zksetup_unsafe, new_keygen, KeygenPartyId, KeygenProtocol,
-            KeygenShareId,
-        },
-        sdk::api::PartyShareCounts,
-    };
+    
 }
     #[cfg(feature = "malicious")]
     use tofn::gg20::keygen::malicious::Behaviour;
@@ -34,7 +27,7 @@ pub mod keygen {
                 )
                 .unwrap();
 
-                (0..party_share_count).map(move |subshare_id| {
+                (0..party_share_count).map(move |_subshare_id| {
                     new_keygen(
                         party_share_counts.total_share_count(),
                         threshold,
