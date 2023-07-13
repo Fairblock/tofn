@@ -36,9 +36,9 @@ use super::malicious::Behaviour;
 /// https://github.com/axelarnetwork/tofn/issues/171
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(super) struct Bcast {
-    // pub(super) y_i_reveal: hash::Randomness,
+   
     pub(super) u_i_vss_commit: vss::Commit,
-    pub(super) faulters: FillVecMap<KeygenShareId, Fault>,
+    
     pub(super) id: usize,
 }
 
@@ -187,10 +187,12 @@ impl Executer for R2 {
                 from: my_keygen_id.as_usize(),
             })
         })?);
-
+        let cc =self.u_i_vss.commit();
+        let cb = cc.secret_commit().to_bytes();
+        debug!("commit: {:?}", cb);
         let bcast_out = Some(serialize(&Bcast {
             // y_i_reveal: self.y_i_reveal.clone(),
-            faulters: faulters.clone(),
+            //faulters: faulters.clone(),
             u_i_vss_commit: self.u_i_vss.commit(),
             id: my_keygen_id.as_usize(),
         })?);

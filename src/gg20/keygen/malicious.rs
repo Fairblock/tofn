@@ -18,7 +18,7 @@ pub enum Behaviour {
     R1BadZkSetupProof,
     R2BadShare { victim: TypedUsize<KeygenShareId>, faulty: TypedUsize<KeygenShareId>},
     R2BadEncryption { victim: TypedUsize<KeygenShareId> },
-    R3FalseAccusation { victim: TypedUsize<KeygenShareId> },
+    R3FalseAccusation { victim: TypedUsize<KeygenShareId>, faulty: TypedUsize<KeygenShareId>  },
     R3BadXIWitness,
 }
 
