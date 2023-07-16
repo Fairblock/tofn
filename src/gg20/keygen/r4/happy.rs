@@ -156,7 +156,7 @@ impl Executer for R4Happy {
                     }
 
                     if !skip {
-                        debug!("y process :{:?}",acc.to_bytes());
+                      //  debug!("y process :{:?}",acc.to_bytes());
                         acc + r2bcast.u_i_vss_commit.secret_commit()
                     } else {
                         debug!("skipped :{:?}", r2bcast.id);

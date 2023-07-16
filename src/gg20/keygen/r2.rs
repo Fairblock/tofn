@@ -189,7 +189,7 @@ impl Executer for R2 {
         })?);
         let cc =self.u_i_vss.commit();
         let cb = cc.secret_commit().to_bytes();
-        debug!("commit: {:?}", cb);
+      //  debug!("commit: {:?}", cb);
         let bcast_out = Some(serialize(&Bcast {
             // y_i_reveal: self.y_i_reveal.clone(),
             //faulters: faulters.clone(),
