@@ -99,8 +99,8 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
               
                 if *msg_type != bytes_meta.expected_msg_types {
                     warn!(
-                        "peer {} (party {}) says: msg_in share id {} gave conflicting expected message types",
-                        share_id, party_id, bytes_meta.from
+                        "peer {:?} (party {:?}) says: msg_in share id {} gave conflicting expected message types",
+                        msg_type, bytes_meta.expected_msg_types, bytes_meta.from
                     );
                     self.msg_in_faulters.set(from, Fault::CorruptedMessage)?;
                     return Ok(());
@@ -127,7 +127,7 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
                             "peer {} (party {}) says: duplicate bcast message from peer {} (party {}) in round {}",
                             share_id, party_id, bytes_meta.from, from, self.info.round(),
                         );
-                        self.msg_in_faulters.set(from, Fault::CorruptedMessage)?;
+                       // self.msg_in_faulters.set(from, Fault::CorruptedMessage)?;
                     }
                 } else {
                     warn!(
@@ -146,7 +146,7 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
                             "peer {} (party {}) says: duplicate p2p to {} message from peer {} (party {}) in round {}",
                             share_id, party_id, to, bytes_meta.from, from, self.info.round(),
                         );
-                        self.msg_in_faulters.set(from, Fault::CorruptedMessage)?;
+                     //   self.msg_in_faulters.set(from, Fault::CorruptedMessage)?;
                     }
                 } else {
                     warn!(
