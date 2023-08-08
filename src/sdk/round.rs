@@ -50,18 +50,18 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
         let party_id = self.info().party_id();
 
         // guard against large-message attack
-        if bytes.len() > MAX_MSG_IN_LEN {
-            warn!(
-                "peer {} (party {}) says: msg_in bytes length {} exceeds maximum {} from party {}",
-                share_id,
-                party_id,
-                bytes.len(),
-                MAX_MSG_IN_LEN,
-                from
-            );
-            self.msg_in_faulters.set(from, Fault::CorruptedMessage)?;
-            return Ok(());
-        }
+        // if bytes.len() > MAX_MSG_IN_LEN {
+        //     warn!(
+        //         "peer {} (party {}) says: msg_in bytes length {} exceeds maximum {} from party {}",
+        //         share_id,
+        //         party_id,
+        //         bytes.len(),
+        //         MAX_MSG_IN_LEN,
+        //         from
+        //     );
+        //     self.msg_in_faulters.set(from, Fault::CorruptedMessage)?;
+        //     return Ok(());
+        // }
 
         // deserialize metadata
         let bytes_meta: WireBytes<K> = match wire_bytes::decode_message(bytes) {
@@ -102,7 +102,7 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
                         "peer {:?} (party {:?}) says: msg_in share id {} gave conflicting expected message types",
                         msg_type, bytes_meta.expected_msg_types, bytes_meta.from
                     );
-                    self.msg_in_faulters.set(from, Fault::CorruptedMessage)?;
+                   // self.msg_in_faulters.set(from, Fault::CorruptedMessage)?;
                     return Ok(());
                 }
                 *msg_type
@@ -221,27 +221,27 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
         self.info.advance_round();
 
         // for each msg_in faulter party P: for each share S belonging to P: unset all of S's messages and mark S as a faulter
-        if !self.msg_in_faulters.is_empty() {
-            let faulter_party_ids = self.msg_in_faulters.as_subset();
+        // if !self.msg_in_faulters.is_empty() {
+        //     let faulter_party_ids = self.msg_in_faulters.as_subset();
 
-            let pretty_faulter_party_ids: Vec<TypedUsize<P>> = faulter_party_ids.iter().collect();
-            debug!(
-                "peer {} (party {}) says: tofn SDK detected msg_in faulter parties {:?} in round {}; deleting all messages received from these parties",
-                my_share_id, my_party_id, pretty_faulter_party_ids, curr_round_num,
-            );
+        //     let pretty_faulter_party_ids: Vec<TypedUsize<P>> = faulter_party_ids.iter().collect();
+        //     debug!(
+        //         "peer {} (party {}) says: tofn SDK detected msg_in faulter parties {:?} in round {}; deleting all messages received from these parties",
+        //         my_share_id, my_party_id, pretty_faulter_party_ids, curr_round_num,
+        //     );
 
-            let faulter_share_ids = self
-                .info
-                .party_share_counts()
-                .share_id_subset(&faulter_party_ids)?;
+        //     let faulter_share_ids = self
+        //         .info
+        //         .party_share_counts()
+        //         .share_id_subset(&faulter_party_ids)?;
 
-            for faulter_share_id in faulter_share_ids {
-                self.expected_msg_types.unset(faulter_share_id)?;
-                self.bcasts_in.unset(faulter_share_id)?;
-                self.p2ps_in.unset_all(faulter_share_id)?;
-                share_faulters.set(faulter_share_id, Fault::CorruptedMessage)?;
-            }
-        }
+        //     for faulter_share_id in faulter_share_ids {
+        //         self.expected_msg_types.unset(faulter_share_id)?;
+        //         self.bcasts_in.unset(faulter_share_id)?;
+        //         self.p2ps_in.unset_all(faulter_share_id)?;
+        //         share_faulters.set(faulter_share_id, Fault::CorruptedMessage)?;
+        //     }
+        // }
 
         self.round
             .execute_raw(
