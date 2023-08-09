@@ -235,25 +235,48 @@ impl Executer for R3 {
                    vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
                 } else {
                     #[cfg(feature = "malicious")]
-                    if let Behaviour::R3FalseAccusation { victim, faulty } = self.behaviour {
-                    if my_keygen_id.as_usize() == faulty.as_usize(){
-                        if peer_keygen_id.as_usize() == victim.as_usize(){
-                            
-                            let commit = bcasts_in
-                            .get(peer_keygen_id)?
-                            .u_i_vss_commit.clone();
-                            let key =  self.r1bcasts
-                    .get(peer_keygen_id)?
-                    .ek;
-                let my_key = self.r1bcasts
-                .get(my_keygen_id)?
-                .ek;
-                            log_accuse_warn(my_keygen_id, peer_keygen_id, "invalid vss share");
-                            let p = vss::Proof::generate_proof(&bls12_381::G1Projective::generator(),&key,&(self.dk*bls12_381::G1Projective::generator()),self.kij.get(peer_keygen_id.as_usize()).unwrap(),&self.dk).unwrap();
-                           let cc = serialize(&commit);
-                           debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
-                           vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
-                        }}}
+                    if let Behaviour::R3FalseAccusation { victim, faulty } = &self.behaviour {
+                        for &faulty_element in faulty {
+                            if my_keygen_id.as_usize() == faulty_element.as_usize() {
+                                for &victim_element in victim {
+                                    if peer_keygen_id.as_usize() == victim_element.as_usize() {
+                                        
+                                        let commit = bcasts_in
+                                            .get(peer_keygen_id)?
+                                            .u_i_vss_commit
+                                            .clone();
+                                        let key = self.r1bcasts
+                                            .get(peer_keygen_id)?
+                                            .ek;
+                                        let my_key = self.r1bcasts
+                                            .get(my_keygen_id)?
+                                            .ek;
+                                        log_accuse_warn(my_keygen_id, peer_keygen_id, "invalid vss share");
+                                        let p = vss::Proof::generate_proof(
+                                            &bls12_381::G1Projective::generator(),
+                                            &key,
+                                            &(self.dk * bls12_381::G1Projective::generator()),
+                                            self.kij.get(peer_keygen_id.as_usize()).unwrap(),
+                                            &self.dk,
+                                        ).unwrap();
+                                        let cc = serialize(&commit);
+                                        debug!("share: {:?} - commits: {:?}", share_info.share.clone(), cc);
+                                        vss_complaints_vec.push(ShareInfoDispute {
+                                            share: share_info.share.clone(),
+                                            kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(),
+                                            proof: p,
+                                            commit: commit,
+                                            faulter: key,
+                                            accuser: my_key,
+                                            accuserId: my_keygen_id.as_usize(),
+                                            faulterId: peer_keygen_id.as_usize(),
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
                  
                     
                 },
@@ -347,24 +370,24 @@ mod malicious {
             x_i
         }
 
-        pub fn corrupt_complaint(
-            &self,
-            keygen_id: TypedUsize<KeygenShareId>,
-            share_infos: &HoleVecMap<KeygenShareId, ShareInfo>,
-            mut vss_complaints: Vec<ShareInfoDispute>,
-        ) -> Vec<ShareInfoDispute> {
-            if let Behaviour::R3FalseAccusation { victim , faulty} = self.behaviour {
-                for dispute in vss_complaints.iter_mut() {
-                    if dispute.faulterId == victim.as_usize(){
-                        dispute.proof = ([0u8;32],[0u8;32],[0u8;32]);
-                  }
-                   // *number *= 2; // Modify the element
-                    //println!("{}", number);
-                }
+        // pub fn corrupt_complaint(
+        //     &self,
+        //     keygen_id: TypedUsize<KeygenShareId>,
+        //     share_infos: &HoleVecMap<KeygenShareId, ShareInfo>,
+        //     mut vss_complaints: Vec<ShareInfoDispute>,
+        // ) -> Vec<ShareInfoDispute> {
+        //     if let Behaviour::R3FalseAccusation { victim , faulty} = self.behaviour {
+        //         for dispute in vss_complaints.iter_mut() {
+        //             if dispute.faulterId == victim.as_usize(){
+        //                 dispute.proof = ([0u8;32],[0u8;32],[0u8;32]);
+        //           }
+        //            // *number *= 2; // Modify the element
+        //             //println!("{}", number);
+        //         }
              
-            }
+        //     }
 
-            vss_complaints
-        }
+        //     vss_complaints
+        // }
     }
 }

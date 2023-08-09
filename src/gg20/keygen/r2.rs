@@ -240,13 +240,16 @@ mod malicious {
             my_keygen_id: TypedUsize<KeygenShareId>,
             mut peer_shares: HoleVecMap<KeygenShareId, Share>,
         ) -> TofnResult<HoleVecMap<KeygenShareId, Share>> {
-            if let Behaviour::R2BadShare { victim, faulty } = self.behaviour {
-                if my_keygen_id.as_usize() == faulty.as_usize() {
-
-                    info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
-
-                    peer_shares.get_mut(victim)?.corrupt();
-                    debug!("this one is malicious!");
+            if let Behaviour::R2BadShare { victim, faulty } = &self.behaviour {
+                for &faulty_element in faulty {
+                    if my_keygen_id.as_usize() == faulty_element.as_usize() {
+                        for &victim_element in victim {
+                            info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
+            
+                            peer_shares.get_mut(victim_element)?.corrupt();
+                            debug!("this one is malicious!");
+                        }
+                    }
                 }
             }
 
@@ -259,14 +262,17 @@ mod malicious {
             victim_keygen_id: TypedUsize<KeygenShareId>,
             mut ciphertext: [u8; 32],
         ) -> [u8; 32] {
-            if let Behaviour::R2BadEncryption { victim } = self.behaviour {
-                if victim == victim_keygen_id {
-                    if victim.as_usize() != my_keygen_id.as_usize() {
-                        info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
-                        ciphertext = [0u8; 32];
+            if let Behaviour::R2BadEncryption { victim } = &self.behaviour {
+                for &victim_element in victim {
+                    if victim_element == victim_keygen_id {
+                        if victim_element.as_usize() != my_keygen_id.as_usize() {
+                            info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
+                            ciphertext = [0u8; 32];
+                        }
                     }
                 }
             }
+            
 
             ciphertext
         }
