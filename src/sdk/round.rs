@@ -42,7 +42,8 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
     /// thus, it's a fatal error if `from` is out of bounds
     
     pub fn msg_inr4(&mut self, from: TypedUsize<K>, bytes: &[u8]) -> TofnResult<()> {
-        self.bcasts_in.set(from, bytes.to_vec())?;
+        let index = TypedUsize::from_usize(bytes.to_vec()[0] as usize);
+        self.bcasts_in.set(index, bytes.to_vec())?;
         Ok(())
     }
     pub fn msg_in(&mut self, from: TypedUsize<P>, bytes: &[u8]) -> TofnResult<()> {

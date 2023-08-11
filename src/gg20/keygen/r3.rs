@@ -231,7 +231,7 @@ impl Executer for R3 {
                     log_accuse_warn(my_keygen_id, peer_keygen_id, "invalid vss share");
                     let p = vss::Proof::generate_proof(&bls12_381::G1Projective::generator(),&key,&(self.dk*bls12_381::G1Projective::generator()),self.kij.get(peer_keygen_id.as_usize()).unwrap(),&self.dk).unwrap();
                    let cc = serialize(&commit);
-                   debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
+                   //debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
                    vss_complaints_vec.push(ShareInfoDispute{ share: share_info.share.clone(), kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(), proof: p, commit:commit, faulter: key, accuser:my_key , accuserId:my_keygen_id.as_usize(), faulterId:peer_keygen_id.as_usize()});
                 } else {
                     #[cfg(feature = "malicious")]
