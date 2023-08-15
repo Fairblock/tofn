@@ -79,7 +79,7 @@ impl Vss {
 #[derive(Clone, Debug)]
 
 pub struct Commit {
-    coeff_commits: Vec<bls12_381::G1Projective>,
+    pub(crate) coeff_commits: Vec<bls12_381::G1Projective>,
 }
 
 impl Serialize for Commit {

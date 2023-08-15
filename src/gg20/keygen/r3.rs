@@ -1,5 +1,6 @@
-use bls12_381::G1Affine;
+use bls12_381::{G1Affine, G1Projective};
 
+use rand::Fill;
 use serde::{Deserialize, Serialize, Serializer, ser::SerializeStruct, Deserializer};
 //use tracing::warn;
 //se tracing_subscriber::field::debug;
@@ -310,7 +311,15 @@ if vss_complaints_vec.len() == 0{
      let bcast_out = Some(
                bcast.as_bytes().to_vec()
             );
-          
+           let mut r2bc: FillVecMap<KeygenShareId,r2::Bcast> = FillVecMap::with_size((bcasts_in.len()));
+            for (key, value) in bcasts_in.iter() {
+                let mut temp: Vec<G1Projective> = Vec::new();
+                temp.insert(0,*bcasts_in
+                    .get(key)?
+                    .u_i_vss_commit.secret_commit());
+                let _ = r2bc.set(key, r2::Bcast { u_i_vss_commit: Commit { coeff_commits: temp }, id: value.id });
+                
+            }
          // debug!("bcastout:{:?}, me: {:?}", bcast, my_keygen_id.as_usize());
             Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
                 Box::new(r4::R4Happy {
@@ -321,7 +330,7 @@ if vss_complaints_vec.len() == 0{
                     kij:self.kij.clone(),
                     u_i_share: self.u_i_share,
                    // r1bcasts: self.r1bcasts,
-                    r2bcasts: bcasts_in,
+                    r2bcasts: r2bc.to_vecmap().unwrap(),
                     r2p2ps: p2ps_in,
                     faulters:faulters,
                  
