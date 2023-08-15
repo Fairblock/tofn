@@ -294,7 +294,7 @@ if vss_complaints_vec.len() == 0{
             ek: self.ek,
             kij:self.kij.clone(),
             u_i_share: self.u_i_share,
-            r1bcasts: self.r1bcasts,
+           // r1bcasts: self.r1bcasts,
             r2bcasts: bcasts_in,
             r2p2ps: p2ps_in,
             faulters:faulters,
@@ -311,7 +311,7 @@ if vss_complaints_vec.len() == 0{
                bcast.as_bytes().to_vec()
             );
           
-          //  debug!("bcastout:{:?}", bcast);
+         // debug!("bcastout:{:?}, me: {:?}", bcast, my_keygen_id.as_usize());
             Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
                 Box::new(r4::R4Happy {
                     threshold: self.threshold,
@@ -320,7 +320,7 @@ if vss_complaints_vec.len() == 0{
                     ek:self.ek,
                     kij:self.kij.clone(),
                     u_i_share: self.u_i_share,
-                    r1bcasts: self.r1bcasts,
+                   // r1bcasts: self.r1bcasts,
                     r2bcasts: bcasts_in,
                     r2p2ps: p2ps_in,
                     faulters:faulters,

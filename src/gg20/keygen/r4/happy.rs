@@ -34,7 +34,7 @@ pub(in super::super) struct R4Happy {
     pub(in super::super) ek: bls12_381::G1Projective,
     pub(in super::super) u_i_share: vss::Share,
     pub(crate) kij: DVecMap<bls12_381::G1Projective>,
-    pub(in super::super) r1bcasts: VecMap<KeygenShareId, r1::Bcast>,
+    // pub(in super::super) r1bcasts: VecMap<KeygenShareId, r1::Bcast>,
     pub(in super::super) r2bcasts: VecMap<KeygenShareId, r2::Bcast>,
     pub(in super::super) r2p2ps: FullP2ps<KeygenShareId, r2::P2p>,
     pub(crate) faulters: FillVecMap<KeygenShareId, Fault>,
