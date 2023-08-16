@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize, Serializer, ser::SerializeStruct, Deserializ
 //se tracing_subscriber::field::debug;
 use tracing::{warn, debug};
 use crate::{
-    collections::{FillVecMap, P2ps, VecMap},
+    collections::{FillVecMap, FullP2ps,P2ps, VecMap, HoleVecMap},
     crypto_tools::{vss::{self, Proof, Commit}, enc::Key},
     gg20::keygen::{r4, SecretKeyShare},
     sdk::{
@@ -311,6 +311,7 @@ if vss_complaints_vec.len() == 0{
      let bcast_out = Some(
                bcast.as_bytes().to_vec()
             );
+           
            let mut r2bc: FillVecMap<KeygenShareId,r2::Bcast> = FillVecMap::with_size((bcasts_in.len()));
             for (key, value) in bcasts_in.iter() {
                 let mut temp: Vec<G1Projective> = Vec::new();
@@ -320,7 +321,20 @@ if vss_complaints_vec.len() == 0{
                 let _ = r2bc.set(key, r2::Bcast { u_i_vss_commit: Commit { coeff_commits: temp }, id: value.id });
                 
             }
-         // debug!("bcastout:{:?}, me: {:?}", bcast, my_keygen_id.as_usize());
+           
+            let new_elements = p2ps_in.map_to_me(my_keygen_id, |value| {
+                // Here you can transform the value if necessary
+                value.clone() // Cloning or transforming the value
+            }).expect("Failed to map to me");
+            // Create a VecMap with the extracted elements
+            let mut x = Vec::new();
+            x.insert(my_keygen_id.as_usize(),new_elements);
+            let vec_map :VecMap<KeygenShareId, HoleVecMap<KeygenShareId, r2::P2p>>= VecMap::from_vec(x);
+            
+            // Create a new FullP2ps with the VecMap
+            let r2p2p_filtered: FullP2ps<KeygenShareId, r2::P2p> = FullP2ps::new(vec_map);
+            
+            debug!("bcastout1:{:?}, me: {:?}, len:{:?}, len p2p before:{:?} , len p2p after:{:?}", bcast_out.clone(), my_keygen_id.as_usize(), bcast_out.clone().unwrap().len(), p2ps_in.size(),r2p2p_filtered.size());
             Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
                 Box::new(r4::R4Happy {
                     threshold: self.threshold,
@@ -331,7 +345,7 @@ if vss_complaints_vec.len() == 0{
                     u_i_share: self.u_i_share,
                    // r1bcasts: self.r1bcasts,
                     r2bcasts: r2bc.to_vecmap().unwrap(),
-                    r2p2ps: p2ps_in,
+                    r2p2ps: r2p2p_filtered,
                     faulters:faulters,
                  
                 }),

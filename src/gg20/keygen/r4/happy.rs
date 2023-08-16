@@ -66,7 +66,7 @@ impl Executer for R4Happy {
         let my_keygen_id = info.my_id();
         let p2ps_in: FullP2ps<KeygenShareId, r2::P2p> = self.r2p2ps;
         let share_infos: crate::collections::HoleVecMap<KeygenShareId, ShareInfo> = p2ps_in
-            .map_to_me(my_keygen_id, |p2p| {
+            .map_to_me(my_keygen_id, |p2p: &r2::P2p| {
                 let mut skip: bool = false;
 
                 for (peer_keygen_id, bcast) in bcasts_in.iter() {

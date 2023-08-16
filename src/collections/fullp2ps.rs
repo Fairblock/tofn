@@ -11,6 +11,10 @@ use crate::{
 pub struct FullP2ps<K, V>(VecMap<K, HoleVecMap<K, V>>);
 
 impl<K, V> FullP2ps<K, V> {
+    pub fn new(vec_map: VecMap<K, HoleVecMap<K, V>>) -> Self {
+        FullP2ps(vec_map)
+    }
+
     pub fn get(&self, from: TypedUsize<K>, to: TypedUsize<K>) -> TofnResult<&V> {
         self.0.get(from)?.get(to)
     }
@@ -96,7 +100,7 @@ impl<K, V> FullP2ps<K, V> {
     }
 
     // private constructor does no checks, does not return TofnResult, cannot panic
-    pub(super) fn from_vecmap(vec: VecMap<K, HoleVecMap<K, V>>) -> Self {
+    pub fn from_vecmap(vec: VecMap<K, HoleVecMap<K, V>>) -> Self {
         Self(vec)
     }
 }
