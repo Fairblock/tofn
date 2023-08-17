@@ -12,7 +12,7 @@ use bincode::{
 };
 
 /// Max message length allowed to be (de)serialized
-const MAX_MSG_LEN: u64 = 1000 * 1000; // 1 MB
+const MAX_MSG_LEN: u64 = 10000 * 1000; // 1 MB
 
 /// Tofn version for serialized data.
 const TOFN_SERIALIZATION_VERSION: u16 = 0;
@@ -47,7 +47,7 @@ where
     let bincode = bincoder();
 
     bincode.serialize(value).map_err(|err| {
-        error!("serialization failure: {}", err.to_string());
+        panic!("serialization failure: {}", err.to_string());
         TofnFatal
     })
 }
