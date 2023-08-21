@@ -366,7 +366,7 @@ impl Executer for R3 {
                     u_i_share: self.u_i_share,
                     // r1bcasts: self.r1bcasts,
                     r2bcasts: r2bc.to_vecmap().unwrap(),
-                    r2p2ps: r2p2p_filtered,
+                    r2p2ps: p2ps_in,
                     faulters: faulters,
                 }),
                 bcast_out,
