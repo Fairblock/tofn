@@ -150,9 +150,7 @@ impl Executer for R3 {
                     my_keygen_id, peer_keygen_id
                 );
                 faulters.set(peer_keygen_id, ProtocolFault)?;
-                // bcasts_in_w.unset(peer_keygen_id);
-
-                // p2ps_in.remove(peer_keygen_id);
+              
             }
         }
         // anyone who did not send p2ps is a faulter
@@ -244,8 +242,7 @@ impl Executer for R3 {
                         &self.dk,
                     )
                     .unwrap();
-                    // let cc = serialize(&commit);
-                    //debug!("share: {:?} - commits: {:?}",share_info.share.clone(),cc );
+                   
                     vss_complaints_vec.push(ShareInfoDispute {
                         share: share_info.share.clone(),
                         kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(),
@@ -280,8 +277,7 @@ impl Executer for R3 {
                                             &self.dk,
                                         )
                                         .unwrap();
-                                        // let cc = serialize(&commit);
-                                        // debug!("share: {:?} - commits: {:?}", share_info.share.clone(), cc);
+                                      
                                         vss_complaints_vec.push(ShareInfoDispute {
                                             share: share_info.share.clone(),
                                             kij: *self.kij.get(peer_keygen_id.as_usize()).unwrap(),
@@ -342,20 +338,9 @@ impl Executer for R3 {
                 );
             }
 
-            let new_elements = p2ps_in
-                .map_to_me(my_keygen_id, |value| {
-                    // Here you can transform the value if necessary
-                    value.clone() // Cloning or transforming the value
-                })
-                .expect("Failed to map to me");
-            // Create a VecMap with the extracted elements
-            let mut x = Vec::new();
-            x.insert(0, new_elements);
-            let vec_map: VecMap<KeygenShareId, HoleVecMap<KeygenShareId, r2::P2p>> =
-                VecMap::from_vec(x);
-
-            // Create a new FullP2ps with the VecMap
-            let r2p2p_filtered: FullP2ps<KeygenShareId, r2::P2p> = FullP2ps::new(vec_map);
+        
+         
+           
             let o = ProtocolBuilder::NotDone(RoundBuilder::new(
                 Box::new(r4::R4Happy {
                     threshold: self.threshold,
@@ -372,7 +357,7 @@ impl Executer for R3 {
                 bcast_out,
                 None,
             ));
-            debug!("this is fine!!!!");
+           
             //debug!("bcastout1:{:?}, me: {:?}, len:{:?}, len p2p before:{:?} , len p2p after:{:?}", bcast_out.clone(), my_keygen_id.as_usize(), bcast_out.clone().unwrap().len(), p2ps_in.size(),r2p2p_filtered.size());
             Ok(o)
         }
@@ -408,24 +393,6 @@ mod malicious {
             x_i
         }
 
-        // pub fn corrupt_complaint(
-        //     &self,
-        //     keygen_id: TypedUsize<KeygenShareId>,
-        //     share_infos: &HoleVecMap<KeygenShareId, ShareInfo>,
-        //     mut vss_complaints: Vec<ShareInfoDispute>,
-        // ) -> Vec<ShareInfoDispute> {
-        //     if let Behaviour::R3FalseAccusation { victim , faulty} = self.behaviour {
-        //         for dispute in vss_complaints.iter_mut() {
-        //             if dispute.faulterId == victim.as_usize(){
-        //                 dispute.proof = ([0u8;32],[0u8;32],[0u8;32]);
-        //           }
-        //            // *number *= 2; // Modify the element
-        //             //println!("{}", number);
-        //         }
-
-        //     }
-
-        //     vss_complaints
-        // }
+  
     }
 }

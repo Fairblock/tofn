@@ -43,6 +43,7 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
     
     pub fn msg_inr4(&mut self, from: TypedUsize<K>, bytes: &[u8]) -> TofnResult<()> {
         let index = TypedUsize::from_usize(bytes.to_vec()[0] as usize);
+        debug!("bcast: {:?}", bytes.to_vec());
         self.bcasts_in.set(index, bytes.to_vec())?;
         Ok(())
     }

@@ -34,7 +34,7 @@ pub(in super::super) struct R4Happy {
     pub(in super::super) ek: bls12_381::G1Projective,
     pub(in super::super) u_i_share: vss::Share,
     pub(crate) kij: DVecMap<bls12_381::G1Projective>,
-    // pub(in super::super) r1bcasts: VecMap<KeygenShareId, r1::Bcast>,
+   
     pub(in super::super) r2bcasts: VecMap<KeygenShareId, r2::Bcast>,
     pub(in super::super) r2p2ps: FullP2ps<KeygenShareId, r2::P2p>,
     pub(crate) faulters: FillVecMap<KeygenShareId, Fault>,
@@ -71,13 +71,7 @@ impl Executer for R4Happy {
 
                 for (peer_keygen_id, bcast) in bcasts_in.iter() {
                     if !bcast.is_none() {
-                        debug!(
-                            "peer: {:?} - me:{}, from :{:?}, bcast:{:?}",
-                            peer_keygen_id.as_usize(),
-                            my_keygen_id.as_usize(),
-                            p2p.from,
-                            bcast.unwrap()
-                        );
+                       
                         if p2p.from == bcast.unwrap() {
                             faulty_list.push(bcast.unwrap());
                             skip = true;
@@ -107,7 +101,7 @@ impl Executer for R4Happy {
 
                     ShareInfo { share: u_i_share }
                 } else {
-                    debug!("discarded - me:{}", my_keygen_id.as_usize());
+                    
                     let destination_array: [u8; 32] = [0; 32];
                     let u_i_share = vss::Share::from_scalar(
                         bls12_381::Scalar::from_bytes(&destination_array).unwrap(),
@@ -127,20 +121,12 @@ impl Executer for R4Happy {
                     if share_info.share.get_index() != 123456789 {
                         acc + share_info.share.get_scalar()
                     } else {
-                        debug!(
-                            "share index excluded: {}, me: {}",
-                            share_info.share.get_index(),
-                            my_keygen_id.as_usize()
-                        );
+                        
                         acc
                     }
                 });
 
-        debug!(
-            "index: {:?} - share :{:?}",
-            my_keygen_id.as_usize(),
-            x_i.to_bytes()
-        );
+     
         // compute y
         let y =
             self.r2bcasts
@@ -156,10 +142,10 @@ impl Executer for R4Happy {
                     }
 
                     if !skip {
-                      //  debug!("y process :{:?}",acc.to_bytes());
+                   
                         acc + r2bcast.u_i_vss_commit.secret_commit()
                     } else {
-                        debug!("skipped :{:?}", r2bcast.id);
+                       
                         acc
                     }
                    

@@ -19,8 +19,8 @@ use crate::{
     },
 };
 
+use aes::cipher::typenum;
 use aes::cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit};
-use aes::cipher::{typenum};
 use aes::Aes256;
 use group::GroupEncoding;
 use sha2::{Digest, Sha256};
@@ -36,9 +36,8 @@ use super::malicious::Behaviour;
 /// https://github.com/axelarnetwork/tofn/issues/171
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(super) struct Bcast {
-   
     pub(super) u_i_vss_commit: vss::Commit,
-    
+
     pub(super) id: usize,
 }
 
@@ -79,7 +78,7 @@ impl EncDec for Key {
 
         // Encrypt the first block in-place
         cipher.encrypt_block(&mut output);
-     
+
         return output;
     }
     fn decrypt(_key: Self, ciphertext: [u8; 16]) -> GenericArray<u8, U16> {
@@ -98,7 +97,7 @@ impl EncDec for Key {
         for i in 0..16 {
             decrypted_plaintext[i] = ciphertext_array[i] ^ nonce[i]
         }
-      
+
         return decrypted_plaintext;
     }
 }
@@ -158,7 +157,7 @@ impl Executer for R2 {
             let kij = self.dk * key;
 
             let k = kij.to_bytes();
-         
+
             let binding = k.as_ref();
             let mut dest_array: [u8; 32] = [0u8; 32];
             dest_array.copy_from_slice(&binding[..32]);
@@ -166,33 +165,29 @@ impl Executer for R2 {
                 Key::encrypt(dest_array, (*share.get_scalar()).to_bytes());
             kij_list.insert(peer_keygen_id.as_usize(), kij);
 
-            let encShare = GenericArray::as_mut_slice(&mut u_i_share_ciphertext);
-            let mut shareB = share.get_scalar().to_bytes();
-            let plainSecondHalf = &shareB.as_mut()[16..];
-           
-            let c: &[&[u8]] = &[encShare, plainSecondHalf];
-            let concatC = c.concat();
+            let enc_share = GenericArray::as_mut_slice(&mut u_i_share_ciphertext);
+            let mut share_bytes = share.get_scalar().to_bytes();
+            let plain_second_half = &share_bytes.as_mut()[16..];
+
+            let c: &[&[u8]] = &[enc_share, plain_second_half];
+            let concat_c = c.concat();
             corrupt!(
-                concatC,
+                concat_c,
                 self.corrupt_ciphertext(
                     my_keygen_id,
                     peer_keygen_id,
-                    concatC.clone().try_into().unwrap()
+                    concat_c.clone().try_into().unwrap()
                 )
             );
 
             serialize(&P2p {
-                u_i_share_ciphertext: concatC.try_into().unwrap(),
+                u_i_share_ciphertext: concat_c.try_into().unwrap(),
                 id: peer_keygen_id.as_usize(),
                 from: my_keygen_id.as_usize(),
             })
         })?);
-        let cc =self.u_i_vss.commit();
-        let cb = cc.secret_commit().to_bytes();
-      //  debug!("commit: {:?}", cb);
+
         let bcast_out = Some(serialize(&Bcast {
-            // y_i_reveal: self.y_i_reveal.clone(),
-            //faulters: faulters.clone(),
             u_i_vss_commit: self.u_i_vss.commit(),
             id: my_keygen_id.as_usize(),
         })?);
@@ -245,7 +240,7 @@ mod malicious {
                     if my_keygen_id.as_usize() == faulty_element.as_usize() {
                         for &victim_element in victim {
                             info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
-            
+
                             peer_shares.get_mut(victim_element)?.corrupt();
                             debug!("this one is malicious!");
                         }
@@ -272,7 +267,6 @@ mod malicious {
                     }
                 }
             }
-            
 
             ciphertext
         }
