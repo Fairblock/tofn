@@ -88,11 +88,15 @@ impl Executer for R4Happy {
                         p2p.u_i_share_ciphertext[0..16].try_into().unwrap(),
                     );
                     let s = u_i_share_plaintext.as_slice();
-
+                    let u_i_share_plaintext_second = Key::decrypt(
+                        dest_array,
+                        p2p.u_i_share_ciphertext[16..].try_into().unwrap(),
+                    );
+                    let s2 = u_i_share_plaintext_second.as_slice();
                     let mut destination_array: [u8; 32] = [0; 32];
 
                     destination_array[..s.len()].copy_from_slice(&s);
-                    destination_array[s.len()..].copy_from_slice(&p2p.u_i_share_ciphertext[16..]);
+                    destination_array[s.len()..].copy_from_slice(&s2);
                    
                     let u_i_share = vss::Share::from_scalar(
                         bls12_381::Scalar::from_bytes(&destination_array).unwrap(),

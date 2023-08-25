@@ -81,6 +81,14 @@ impl EncDec for Key {
 
         return output;
     }
+    fn convert(slice: &[u8]) -> Result<[u8; 32], &'static str> {
+       
+        let mut array = [0u8; 32];
+        for (i, &item) in slice.iter().enumerate() {
+            array[i] = item;
+        }
+        Ok(array)
+    }
     fn decrypt(_key: Self, ciphertext: [u8; 16]) -> GenericArray<u8, U16> {
         let key = GenericArray::from(_key);
         let hashvalue = Sha256::digest(&key.as_ref());
@@ -168,8 +176,10 @@ impl Executer for R2 {
             let enc_share = GenericArray::as_mut_slice(&mut u_i_share_ciphertext);
             let mut share_bytes = share.get_scalar().to_bytes();
             let plain_second_half = &share_bytes.as_mut()[16..];
-
-            let c: &[&[u8]] = &[enc_share, plain_second_half];
+            let mut u_i_share_ciphertext_second =
+                Key::encrypt(dest_array, Key::convert(plain_second_half).unwrap());
+            let enc_share_p2 = GenericArray::as_mut_slice(&mut u_i_share_ciphertext_second);    
+            let c: &[&[u8]] = &[enc_share, enc_share_p2];
             let concat_c = c.concat();
             corrupt!(
                 concat_c,
