@@ -2,9 +2,10 @@
 use crate::sdk::api::{TofnFatal, TofnResult};
 
 
+use aes::cipher::generic_array::arr;
 use group::{ff::PrimeField, GroupEncoding};
 use num_bigint::BigUint;
-use num_traits::{FromPrimitive};
+use num_traits::{FromPrimitive, Num};
 use rand::Rng;
 use serde::{ser::SerializeSeq, ser::SerializeStruct, Deserializer, Serialize, Serializer};
 use std::{convert::TryInto};
@@ -12,7 +13,7 @@ use std::{convert::TryInto};
 
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use tracing::{error};
+use tracing::{error, debug};
 
 // use num_bigint::{BigUint, ToBigUint};
 // use kyber::{Scalar, GroupElement};
@@ -311,16 +312,29 @@ impl Proof {
         let mut hash_bytes: [u8; 32] = [0u8; 32];
         let mut result: [u8; 32] = [0u8; 32];
         hash_bytes.copy_from_slice(&c.as_ref());
-        let mut hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&hash_bytes);
-        while hash2_kyber_scalar.is_some().unwrap_u8() == 0 {
-           
-            let gorder = order.as_bytes();
-            for i in 0..32 {
-                result[i] = hash_bytes[i].wrapping_sub(gorder[i]);
-            }
-            hash_bytes = result;
-            hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&result);
-        }
+        let c_biguint = BigUint::from_bytes_be(&hash_bytes);
+        let modulus = BigUint::from_str_radix(order, 16).expect("Failed to convert modulus to BigUint");
+
+        // Compute c mod modulus
+        let result = c_biguint % &modulus;
+        
+        // Convert the result back to Vec<u8>
+        let result_bytes = result.to_bytes_le();
+        let array: [u8; 32] = result_bytes.try_into().expect("Length mismatch");
+      //  let hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&array);
+        let mut hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&array);
+        debug!("c:{:?}", hash_bytes);
+        
+        // if hash2_kyber_scalar.is_some().unwrap_u8() == 0 {
+        //    // debug!("hash bytes in loop first {:?}", hash_bytes);
+        //     // let gorder = order.as_bytes();
+        //     // for i in 0..32 {
+        //     //     result[i] = hash_bytes[i].wrapping_sub(gorder[i]);
+        //     // }
+        //     // hash_bytes = result;
+        //     //debug!("hash bytes in loop after {:?}", hash_bytes);
+        //     hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&result);
+        // }
         let u = &hash2_kyber_scalar.unwrap();
 
         let s = secret_key_j;
