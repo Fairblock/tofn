@@ -43,7 +43,7 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
     
     pub fn msg_inr4(&mut self, from: TypedUsize<K>, bytes: &[u8]) -> TofnResult<()> {
         let index = TypedUsize::from_usize(bytes.to_vec()[0] as usize);
-        debug!("bcast: {:?}", bytes.to_vec());
+        //debug!("bcast: {:?}", bytes.to_vec());
         self.bcasts_in.set(index, bytes.to_vec())?;
         Ok(())
     }
@@ -223,27 +223,27 @@ impl<F, K, P, const MAX_MSG_IN_LEN: usize> Round<F, K, P, MAX_MSG_IN_LEN> {
         self.info.advance_round();
 
         // for each msg_in faulter party P: for each share S belonging to P: unset all of S's messages and mark S as a faulter
-        // if !self.msg_in_faulters.is_empty() {
-        //     let faulter_party_ids = self.msg_in_faulters.as_subset();
+        if !self.msg_in_faulters.is_empty() {
+            let faulter_party_ids = self.msg_in_faulters.as_subset();
 
-        //     let pretty_faulter_party_ids: Vec<TypedUsize<P>> = faulter_party_ids.iter().collect();
-        //     debug!(
-        //         "peer {} (party {}) says: tofn SDK detected msg_in faulter parties {:?} in round {}; deleting all messages received from these parties",
-        //         my_share_id, my_party_id, pretty_faulter_party_ids, curr_round_num,
-        //     );
+            let pretty_faulter_party_ids: Vec<TypedUsize<P>> = faulter_party_ids.iter().collect();
+            debug!(
+                "peer {} (party {}) says: tofn SDK detected msg_in faulter parties {:?} in round {}; deleting all messages received from these parties",
+                my_share_id, my_party_id, pretty_faulter_party_ids, curr_round_num,
+            );
 
-        //     let faulter_share_ids = self
-        //         .info
-        //         .party_share_counts()
-        //         .share_id_subset(&faulter_party_ids)?;
+            let faulter_share_ids = self
+                .info
+                .party_share_counts()
+                .share_id_subset(&faulter_party_ids)?;
 
-        //     for faulter_share_id in faulter_share_ids {
-        //         self.expected_msg_types.unset(faulter_share_id)?;
-        //         self.bcasts_in.unset(faulter_share_id)?;
-        //         self.p2ps_in.unset_all(faulter_share_id)?;
-        //         share_faulters.set(faulter_share_id, Fault::CorruptedMessage)?;
-        //     }
-        // }
+            for faulter_share_id in faulter_share_ids {
+                self.expected_msg_types.unset(faulter_share_id)?;
+                self.bcasts_in.unset(faulter_share_id)?;
+                self.p2ps_in.unset_all(faulter_share_id)?;
+                share_faulters.set(faulter_share_id, Fault::CorruptedMessage)?;
+            }
+        }
 
         self.round
             .execute_raw(
