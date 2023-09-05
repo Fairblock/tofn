@@ -5,7 +5,7 @@ use crate::sdk::api::{TofnFatal, TofnResult};
 use aes::cipher::generic_array::arr;
 use group::{ff::PrimeField, GroupEncoding};
 use num_bigint::BigUint;
-use num_traits::{FromPrimitive, Num};
+use num_traits::{FromPrimitive, Num, Saturating};
 use rand::Rng;
 use serde::{ser::SerializeSeq, ser::SerializeStruct, Deserializer, Serialize, Serializer};
 use std::{convert::TryInto};
@@ -319,11 +319,17 @@ impl Proof {
         let result = c_biguint % &modulus;
         
         // Convert the result back to Vec<u8>
-        let result_bytes = result.to_bytes_le();
+        let mut result_bytes = result.to_bytes_le();
+        let zeros_to_add = 32.saturating_sub(result_bytes.len());
+    
+        // Add zeros at the beginning
+        let zeros = vec![0; zeros_to_add];
+        result_bytes.splice(0..0, zeros);
+        //debug!("res bytes:{:?}", result_bytes);
         let array: [u8; 32] = result_bytes.try_into().expect("Length mismatch");
       //  let hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&array);
         let mut hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&array);
-        debug!("c:{:?}", hash_bytes);
+       
         
         // if hash2_kyber_scalar.is_some().unwrap_u8() == 0 {
         //    // debug!("hash bytes in loop first {:?}", hash_bytes);
