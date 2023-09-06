@@ -304,29 +304,29 @@ impl Proof {
             t1.to_bytes(),
             t2.to_bytes()
         );
-        
+       
         let mut hasher = Sha256::new();
         hasher.update(concat.as_bytes());
         let c = hasher.finalize();
         
         let mut hash_bytes: [u8; 32] = [0u8; 32];
-        let mut result: [u8; 32] = [0u8; 32];
+       
         hash_bytes.copy_from_slice(&c.as_ref());
         let c_biguint = BigUint::from_bytes_be(&hash_bytes);
         let modulus = BigUint::from_str_radix(order, 16).expect("Failed to convert modulus to BigUint");
 
         // Compute c mod modulus
         let result = c_biguint % &modulus;
-        
+     
         // Convert the result back to Vec<u8>
         let mut result_bytes = result.to_bytes_le();
-        let zeros_to_add = 32.saturating_sub(result_bytes.len());
+        let mut zeros_to_add = 32.saturating_sub(result_bytes.len());
     
         // Add zeros at the beginning
-        let zeros = vec![0; zeros_to_add];
+        let mut zeros = vec![0; zeros_to_add];
         result_bytes.splice(0..0, zeros);
         //debug!("res bytes:{:?}", result_bytes);
-        let array: [u8; 32] = result_bytes.try_into().expect("Length mismatch");
+        let mut array: [u8; 32] = result_bytes.try_into().expect("Length mismatch");
       //  let hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&array);
         let mut hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&array);
        
@@ -341,6 +341,18 @@ impl Proof {
         //     //debug!("hash bytes in loop after {:?}", hash_bytes);
         //     hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&result);
         // }
+        if hash2_kyber_scalar.is_some().unwrap_u8() == 0 {
+             result_bytes = result.to_bytes_be();
+             zeros_to_add = 32.saturating_sub(result_bytes.len());
+        
+            // Add zeros at the beginning
+             zeros = vec![0; zeros_to_add];
+            result_bytes.splice(0..0, zeros);
+            //debug!("res bytes:{:?}", result_bytes);
+            let array: [u8; 32] = result_bytes.try_into().expect("Length mismatch");
+          //  let hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&array);
+             hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&array);
+        }
         let u = &hash2_kyber_scalar.unwrap();
 
         let s = secret_key_j;
@@ -349,7 +361,7 @@ impl Proof {
 
         let b = binding.neg();
         let r = b + omega;
-
+        debug!("debug-------------------------------------------------------------------------!!!");
         Ok(((*u).to_bytes(), r.to_bytes(), c.into()))
     }
 }
