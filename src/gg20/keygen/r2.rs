@@ -249,10 +249,10 @@ mod malicious {
                 for &faulty_element in faulty {
                     if my_keygen_id.as_usize() == faulty_element.as_usize() {
                         for &victim_element in victim {
-                            info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
+                            //info!("malicious peer {} does {:?}", my_keygen_id, self.behaviour);
 
                             peer_shares.get_mut(victim_element)?.corrupt();
-                            debug!("this one is malicious!");
+                          //  debug!("this one is malicious!");
                         }
                     }
                 }

@@ -312,6 +312,7 @@ impl Proof {
         let mut hash_bytes: [u8; 32] = [0u8; 32];
        
         hash_bytes.copy_from_slice(&c.as_ref());
+      //  debug!("hash bytes: {:?}", hash_bytes);
         let c_biguint = BigUint::from_bytes_be(&hash_bytes);
         let modulus = BigUint::from_str_radix(order, 16).expect("Failed to convert modulus to BigUint");
 
@@ -343,11 +344,7 @@ impl Proof {
         // }
         if hash2_kyber_scalar.is_some().unwrap_u8() == 0 {
              result_bytes = result.to_bytes_be();
-             zeros_to_add = 32.saturating_sub(result_bytes.len());
-        
-            // Add zeros at the beginning
-             zeros = vec![0; zeros_to_add];
-            result_bytes.splice(0..0, zeros);
+             result_bytes.resize(32, 0);
             //debug!("res bytes:{:?}", result_bytes);
             let array: [u8; 32] = result_bytes.try_into().expect("Length mismatch");
           //  let hash2_kyber_scalar = bls12_381::Scalar::from_bytes(&array);
@@ -361,7 +358,7 @@ impl Proof {
 
         let b = binding.neg();
         let r = b + omega;
-        debug!("debug-------------------------------------------------------------------------!!!");
+      //  debug!("debug-------------------------------------------------------------------------!!!");
         Ok(((*u).to_bytes(), r.to_bytes(), c.into()))
     }
 }
@@ -559,3 +556,5 @@ mod tests {
         assert_eq!(recovered_secret, *vss.get_secret());
     }
 }
+
+

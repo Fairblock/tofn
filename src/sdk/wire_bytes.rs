@@ -61,7 +61,7 @@ pub fn deserialize<T: DeserializeOwned>(bytes: &[u8]) -> Option<T> {
     let out = bincode
         .deserialize(bytes)
         .map_err(|err| {
-            warn!("deserialization failure: {}", err.to_string());
+            panic!("deserialization failure: {}", err.to_string());
         })
         .ok();
    
@@ -225,3 +225,4 @@ pub mod malicious {
         )
     }
 }
+

@@ -187,7 +187,7 @@ impl Executer for R3 {
         }
 
         let kijs = self.kij.clone();
-        debug!("new version!");
+       // debug!("new version!");
         // decrypt shares
         let share_infos = p2ps_in.map_to_me(my_keygen_id, |p2p| {
             if p2p.id == my_keygen_id.as_usize() {
@@ -301,7 +301,7 @@ impl Executer for R3 {
             )
         })?;
 
-        debug!("r3 done");
+        
         if vss_complaints_vec.len() == 0 {
             Ok(ProtocolBuilder::NotDone(RoundBuilder::new(
                 Box::new(r4::R4Happy {
@@ -361,7 +361,7 @@ impl Executer for R3 {
                 bcast_out,
                 None,
             ));
-           
+            debug!("r3 done");
             //debug!("bcastout1:{:?}, me: {:?}, len:{:?}, len p2p before:{:?} , len p2p after:{:?}", bcast_out.clone(), my_keygen_id.as_usize(), bcast_out.clone().unwrap().len(), p2ps_in.size(),r2p2p_filtered.size());
             Ok(o)
         }
@@ -400,3 +400,5 @@ mod malicious {
   
     }
 }
+
+

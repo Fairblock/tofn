@@ -20,7 +20,7 @@ mod utils {
     }
 
     pub fn log_accuse_warn<K>(me: TypedUsize<K>, faulter: TypedUsize<K>, fault: &str) {
-        warn!("peer {} accused {} of [{}]", me, faulter, fault);
+       // warn!("peer {} accused {} of [{}]", me, faulter, fault);
     }
 }
 pub use utils::{log_accuse_warn, log_fault_info, log_fault_warn};
