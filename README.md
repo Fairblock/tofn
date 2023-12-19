@@ -1,5 +1,5 @@
+# This is a modified version of the tofn library at [tofn](https://github.com/axelarnetwork/tofn.git)
 # Tofn (t-of-n): a threshold cryptography library in Rust
-
 Tofn provides the following:
 * An implementation of the [GG20](https://eprint.iacr.org/2020/540.pdf) threshold-ECDSA protocol.
 * A general-purpose SDK (software development kit) to facilitate the development and use of threshold cryptography protocols such as GG20.
